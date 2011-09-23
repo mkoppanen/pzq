@@ -20,7 +20,7 @@
 #include <exception>
 #include <boost/scoped_array.hpp>
 
-void pzq::datastore_t::open (const std::string &path)
+void pzq::datastore_t::open (const std::string &path, uint64_t inflight_size)
 {
 	std::string p = path;
 
@@ -33,7 +33,7 @@ void pzq::datastore_t::open (const std::string &path)
 
 	p.append (".inflight");
 
-	this->inflight_db.cap_size (31457280);
+	this->inflight_db.cap_size (inflight_size);
 	if (this->inflight_db.open (p, CacheDB::OWRITER | CacheDB::OCREATE | CacheDB::ONOLOCK) == false)
 		throw pzq::datastore_exception (this->db);
 }
@@ -82,17 +82,17 @@ void pzq::datastore_t::sync ()
 {
 	if (m_divisor == 0 || (rand () % m_divisor) == 0)
 	{
-		std::cerr << "Size of database: " << this->db.size () << std::endl;
-		std::cerr << "Number of entries: " << this->db.count () << std::endl;
-
-		std::cerr << "Size of inflight database: " << this->inflight_db.size () << std::endl;
-		std::cerr << "Number of inflight entries: " << this->inflight_db.count () << std::endl;
-
         if (!this->db.synchronize (true))
             throw pzq::datastore_exception (this->db);
 
 		if (!this->inflight_db.synchronize (true))
             throw pzq::datastore_exception (this->db);
+
+		std::cerr << "Size of database: " << this->db.size () << std::endl;
+		std::cerr << "Number of entries: " << this->db.count () << std::endl;
+
+		std::cerr << "Size of inflight database: " << this->inflight_db.size () << std::endl;
+		std::cerr << "Number of inflight entries: " << this->inflight_db.count () << std::endl;
 	}
 }
 

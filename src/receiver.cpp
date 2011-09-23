@@ -16,12 +16,12 @@
 
 #include "receiver.hpp"
 
-pzq::receiver_t::receiver_t (zmq::context_t &ctx, int divisor) : m_sender (ctx)
+pzq::receiver_t::receiver_t (zmq::context_t &ctx, std::string &database_file, int divisor, uint64_t inflight_size) : m_sender (ctx)
 {
 	m_store.reset (new pzq::datastore_t ());
 
     m_store.get ()->set_sync_divisor (divisor);
-    m_store.get ()->open ("/tmp/sink.kch");
+    m_store.get ()->open (database_file, inflight_size);
 
 	m_sender.set_datastore (m_store);
 

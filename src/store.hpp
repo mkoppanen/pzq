@@ -29,7 +29,7 @@ namespace pzq {
     {
     public:
         // Called when the data store is opened
-        virtual void open (const std::string &path) = 0;
+        virtual void open (const std::string &path, uint64_t inflight_size) = 0;
 
         // Save a message and flags to datastore
         virtual bool save (const std::vector <pzq_message> &message_parts) = 0;
@@ -70,7 +70,7 @@ namespace pzq {
         datastore_t () : m_divisor (0)
         {}
 
-        void open (const std::string &path);
+        void open (const std::string &path, uint64_t inflight_size);
 
         bool save (const std::vector <pzq_message> &message_parts);
 

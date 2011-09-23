@@ -39,7 +39,7 @@ namespace pzq
 		bool send_response (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status);
 
     public:
-        receiver_t (zmq::context_t &ctx, int divisor = 0);
+        receiver_t (zmq::context_t &ctx, std::string &database_file, int divisor, uint64_t inflight_size);
 
         void run ();
     };
