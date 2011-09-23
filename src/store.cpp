@@ -20,7 +20,6 @@
 #include <exception>
 #include <boost/scoped_array.hpp>
 
-
 void pzq::datastore_t::open (const std::string &path)
 {
 	std::string p = path;
@@ -41,7 +40,7 @@ void pzq::datastore_t::open (const std::string &path)
 
 bool pzq::datastore_t::save (const std::vector <pzq_message> &message_parts)
 {
-    uuid_string_t uuid_str;
+    pzq_uuid_string_t uuid_str;
     timeval tv;
 	uuid_t uu;
 
