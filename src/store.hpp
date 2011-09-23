@@ -23,6 +23,8 @@ using namespace kyotocabinet;
 
 namespace pzq {
 
+    typedef char pzq_uuid_string_t [37];
+
     class i_datastore_t
     {
     public:
