@@ -11,7 +11,7 @@ $poll->add ($s, ZMQ::POLL_IN);
 
 sleep (1);
 
-for ($i = 0; $i < 100000000; $i++)
+for ($i = 0; $i < 10000000; $i++)
 {
     $s->sendMulti (array ("msg", "aa", "bb", "cc"));
     
@@ -19,7 +19,7 @@ for ($i = 0; $i < 100000000; $i++)
     $poll->poll ($readable, $writable, 10000);
     
     if (count ($readable))
-        $s->recvmulti ();
+        var_dump ($s->recvmulti ());
 
     echo "Sent message " . ($i + 1) . PHP_EOL;
 }	

@@ -20,7 +20,7 @@
 #include <exception>
 #include <boost/scoped_array.hpp>
 
-void pzq::datastore_t::open (const std::string &path, uint64_t inflight_size)
+void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
 {
 	std::string p = path;
 
@@ -28,7 +28,7 @@ void pzq::datastore_t::open (const std::string &path, uint64_t inflight_size)
 
     this->db.tune_comparator (DECIMALCOMP);
 
-    if (this->db.open (p, TreeDB::OWRITER | TreeDB::OCREATE | TreeDB::ONOLOCK) == false)
+    if (this->db.open (p, TreeDB::OWRITER | TreeDB::OCREATE) == false)
         throw pzq::datastore_exception (this->db);
 
 	p.append (".inflight");
@@ -82,13 +82,13 @@ void pzq::datastore_t::sync ()
 {
 	if (m_divisor == 0 || (rand () % m_divisor) == 0)
 	{
-	    std::cerr << "Syncing to disk" << std::endl;
+	    std::cerr << "Syncing to disk, hard: " << (m_hard_sync ? "yes" : "no") << std::endl;
 
         if (!this->db.synchronize (m_hard_sync))
             throw pzq::datastore_exception (this->db);
 
 		if (!this->inflight_db.synchronize (m_hard_sync))
-            throw pzq::datastore_exception (this->db);
+            throw pzq::datastore_exception (this->inflight_db);
 
 		std::cerr << "Size of database: " << this->db.size () << std::endl;
 		std::cerr << "Number of entries: " << this->db.count () << std::endl;
@@ -100,7 +100,9 @@ void pzq::datastore_t::sync ()
 
 void pzq::datastore_t::remove (const std::string &key)
 {
-	this->inflight_db.remove (key.c_str (), key.size ());
+    if (!this->inflight_db.remove (key.c_str (), key.size ()))
+        throw pzq::datastore_exception (this->inflight_db);
+
 	this->db.remove (key);
 	sync ();
 }
@@ -117,8 +119,8 @@ int64_t pzq::datastore_t::messages ()
 
 bool pzq::datastore_t::is_in_flight (const std::string &k)
 {
-	uint64_t value;
-	if (this->inflight_db.get (k.c_str (), k.size (), (char *) &value, sizeof (uint64_t)) == -1)
+	int value;
+	if (this->inflight_db.get (k.c_str (), k.size (), (char *) &value, sizeof (int)) == -1)
 		return false;
 
 	if (time (NULL) - value > m_ack_timeout)
@@ -132,8 +134,8 @@ bool pzq::datastore_t::is_in_flight (const std::string &k)
 
 void pzq::datastore_t::mark_in_flight (const std::string &k)
 {
-	uint64_t value = time (NULL);
-	this->inflight_db.add (k.c_str (), k.size (), (const char *) &value, sizeof (uint64_t));
+	int value = time (NULL);
+    this->inflight_db.add (k.c_str (), k.size (), (const char *) &value, sizeof (int));
 }
 
 void pzq::datastore_t::iterate (DB::Visitor *visitor)

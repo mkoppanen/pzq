@@ -36,7 +36,7 @@ int main (int argc, char *argv [])
     po::variables_map vm;
     std::string filename;
     int ack_timeout, sync_divisor;
-    uint64_t inflight_size;
+    int64_t inflight_size;
     bool hard_sync;
     std::string receive_dsn, ack_dsn, publish_dsn;
 
@@ -68,7 +68,7 @@ int main (int argc, char *argv [])
 
     desc.add_options()
         ("inflight-size",
-          po::value<uint64_t> (&inflight_size)->default_value (31457280),
+          po::value<int64_t> (&inflight_size)->default_value (31457280),
          "Maximum size in bytes for the in-flight messages database. Full database causes LRU collection")
     ;
 

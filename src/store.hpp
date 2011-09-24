@@ -29,7 +29,7 @@ namespace pzq {
     {
     public:
         // Called when the data store is opened
-        virtual void open (const std::string &path, uint64_t inflight_size) = 0;
+        virtual void open (const std::string &path, int64_t inflight_size) = 0;
 
         // Save a message and flags to datastore
         virtual bool save (const std::vector <pzq_message> &message_parts) = 0;
@@ -72,7 +72,7 @@ namespace pzq {
         datastore_t () : m_divisor (0), m_ack_timeout (5), m_hard_sync (false)
         {}
 
-        void open (const std::string &path, uint64_t inflight_size);
+        void open (const std::string &path, int64_t inflight_size);
 
         bool save (const std::vector <pzq_message> &message_parts);
 
@@ -83,6 +83,8 @@ namespace pzq {
         void close ();
 
         int64_t messages ();
+
+        int64_t messages_in_flight ();
 
 		bool is_in_flight (const std::string &k);
 
@@ -120,14 +122,14 @@ namespace pzq {
             db_err.append (message);
         }
 
-        datastore_exception (const char *message, const TreeDB& db)
+        datastore_exception (const char *message, const BasicDB& db)
         {
             db_err.append (message);
             db_err.append (": ");
             db_err.append (db.error ().message ());
         }
 
-        datastore_exception (const TreeDB& db)
+        datastore_exception (const BasicDB& db)
         {
             db_err.append (db.error ().message ());
         }

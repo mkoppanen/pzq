@@ -18,7 +18,7 @@
 
 pzq::sender_t::sender_t (zmq::context_t &ctx, std::string &dsn, bool use_pub)
 {
-    uint64_t hwm = 1;
+    uint64_t hwm = 100;
 	int linger = 1000;
     int type = (use_pub) ? ZMQ_PUB : ZMQ_PUSH;
 
@@ -48,7 +48,7 @@ const char *pzq::sender_t::visit_full (const char *kbuf, size_t ksiz, const char
     size_t msg_size;
     bool more = true;
 
-	std::string key (kbuf);
+	std::string key (kbuf, ksiz);
 
 	if (m_store.get ()->is_in_flight (key))
 	{

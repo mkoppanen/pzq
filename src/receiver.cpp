@@ -75,7 +75,7 @@ void pzq::receiver_t::run ()
 
     while (keep_running) { 
         try {
-            int timeout = (m_store.get ()->messages () > 0) ? 10000 : -1;
+            int timeout = (m_store.get ()->messages () > 0) ? 10000 : 1000000;
             rc = zmq::poll (&items [0], 2, timeout);
         } catch (std::exception& e) {
             std::cerr << e.what () << ". exiting.." << std::endl;
@@ -122,7 +122,7 @@ void pzq::receiver_t::run ()
 
         if (items [1].revents & ZMQ_POLLIN)
         {
-			// The item to delete
+            // The item to delete
 			zmq::message_t message;
 
 			// Delete socket handling
