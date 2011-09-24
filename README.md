@@ -33,6 +33,30 @@ Options
           --use-pubsub                       Changes the backend client communication 
                                              socket to use publish subscribe pattern
 
+Consistency
+===========
+
+--ack-timeout
+Defines how long to wait for an ACK for message delivered before scheduling
+it for retransmission.
+
+--sync-divisor
+Sync divisor is used to determine how often the messages should be flushed
+to disk. Effectively, on each operation a random number between 0 and 
+sync_divisor is chosen and if the number is 0 then a sync is done. Setting 
+higher sync divisor causes things to run faster but this comes with the cost
+of possibly more messages lost on crash.
+
+--hard-sync
+Hard syncing will cause the database to sync all the way to the physical
+device, which again makes things a bit more secure at the cost of performance.
+
+--inflight-size
+Defines the maximum size in bytes for the messages that are in flight. Setting
+this database small can harm performance as LRU needs to run more often and 
+the messages that were in flight need to be retransmitted.
+
+
 TODO
 ====
 
