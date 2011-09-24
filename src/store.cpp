@@ -27,6 +27,7 @@ void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
     srand (time (NULL));
 
     this->db.tune_comparator (DECIMALCOMP);
+    this->db.tune_defrag (8);
 
     if (this->db.open (p, TreeDB::OWRITER | TreeDB::OCREATE) == false)
         throw pzq::datastore_exception (this->db);
@@ -103,7 +104,9 @@ void pzq::datastore_t::remove (const std::string &key)
     if (!this->inflight_db.remove (key.c_str (), key.size ()))
         throw pzq::datastore_exception (this->inflight_db);
 
-	this->db.remove (key);
+	if (!this->db.remove (key))
+	    throw pzq::datastore_exception (this->db);
+
 	sync ();
 }
 

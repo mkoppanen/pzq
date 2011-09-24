@@ -20,37 +20,37 @@ extern sig_atomic_t keep_running;
 
 pzq::receiver_t::receiver_t (zmq::context_t &ctx, std::string &database_file, int divisor, uint64_t inflight_size) : m_receive_dsn ("tcp://*:11131"), m_ack_dsn ("tcp://*:11132")
 {
-	int linger = 1000;
+    int linger = 1000;
 
     m_socket.reset (new zmq::socket_t (ctx, ZMQ_XREP));
-	m_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+    m_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
 
     m_ack_socket.reset (new zmq::socket_t (ctx, ZMQ_PULL));
-	m_ack_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+    m_ack_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
 }
 
 bool pzq::receiver_t::send_response (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status)
 {
-	// The peer identifier
-	zmq::message_t header (peer_id.get ()->size ());
-	memcpy (header.data (), peer_id.get ()->data (), peer_id.get ()->size ());
-	m_socket.get ()->send (header, ZMQ_SNDMORE);
+    // The peer identifier
+    zmq::message_t header (peer_id.get ()->size ());
+    memcpy (header.data (), peer_id.get ()->data (), peer_id.get ()->size ());
+    m_socket.get ()->send (header, ZMQ_SNDMORE);
 
-	// Blank part 
-	zmq::message_t blank;
-	m_socket.get ()->send (blank, ZMQ_SNDMORE);
+    // Blank part 
+    zmq::message_t blank;
+    m_socket.get ()->send (blank, ZMQ_SNDMORE);
 
-	// The request id
-	zmq::message_t rid (ticket.get ()->size ());
-	memcpy (rid.data (), ticket.get ()->data (), ticket.get ()->size ());
-	m_socket.get ()->send (rid, ZMQ_SNDMORE);
+    // The request id
+    zmq::message_t rid (ticket.get ()->size ());
+    memcpy (rid.data (), ticket.get ()->data (), ticket.get ()->size ());
+    m_socket.get ()->send (rid, ZMQ_SNDMORE);
 
-	// The request status
-	zmq::message_t rstatus (status.size ());
-	memcpy (rstatus.data (), status.c_str (), status.size ());
-	m_socket.get ()->send (rstatus, 0);
+    // The request status
+    zmq::message_t rstatus (status.size ());
+    memcpy (rstatus.data (), status.c_str (), status.size ());
+    m_socket.get ()->send (rstatus, 0);
 
-	return true;
+    return true;
 }
 
 void pzq::receiver_t::run ()
@@ -98,39 +98,43 @@ void pzq::receiver_t::run ()
                 m_socket.get ()->getsockopt (ZMQ_RCVMORE, &more, &moresz);
                 int flags = (more) ? ZMQ_SNDMORE : 0;
 
-				if (message.get ()->size () > 0)
-                	message_parts.push_back (std::make_pair (message, flags));
-			} while (more);
+                if (message.get ()->size () > 0)
+                    message_parts.push_back (std::make_pair (message, flags));
+            } while (more);
 
-			if (message_parts.size () < 2)
-			{
-				std::cerr << "The message doesn't contain enough parts" << std::endl;
-				continue;
-			}
+            if (message_parts.size () < 2)
+            {
+                std::cerr << "The message doesn't contain enough parts" << std::endl;
+                continue;
+            }
 
-			boost::shared_ptr<zmq::message_t> ticket = message_parts [1].first;
-			message_parts.erase (message_parts.begin () + 1);
+            boost::shared_ptr<zmq::message_t> ticket = message_parts [1].first;
+            message_parts.erase (message_parts.begin () + 1);
 
             try {
                 m_store.get ()->save (message_parts);
-				send_response (message_parts [0].first, ticket, "OK");
-			} catch (std::exception &e) {
+                send_response (message_parts [0].first, ticket, "OK");
+            } catch (std::exception &e) {
                 std::cerr << "Failed to store message: " << e.what () << std::endl;
-				send_response (message_parts [0].first, ticket, "NOT OK");
+                send_response (message_parts [0].first, ticket, "NOT OK");
             }
         }
 
         if (items [1].revents & ZMQ_POLLIN)
         {
             // The item to delete
-			zmq::message_t message;
+            zmq::message_t message;
 
-			// Delete socket handling
-			m_ack_socket.get ()->recv (&message, 0);
+            // Delete socket handling
+            m_ack_socket.get ()->recv (&message, 0);
 
-			std::string key (static_cast <char *>(message.data ()), message.size ());
-			m_store.get ()->remove (key);
-		}
+            std::string key (static_cast <char *>(message.data ()), message.size ());
+            try {
+                m_store.get ()->remove (key);
+            } catch (std::exception &e) {
+                std::cerr << "Failed to remove record: " << std::string (static_cast <char *>(message.data ()), message.size ()) << std::endl;
+            }
+        }
 
         if (m_store.get ()->messages () > 0 && m_sender.get ()->can_write ())
         {
