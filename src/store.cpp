@@ -35,7 +35,7 @@ void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
 	p.append (".inflight");
 
 	this->inflight_db.cap_size (inflight_size);
-	if (this->inflight_db.open (p, CacheDB::OWRITER | CacheDB::OCREATE | CacheDB::ONOLOCK) == false)
+	if (this->inflight_db.open (p, CacheDB::OWRITER | CacheDB::OCREATE) == false)
 		throw pzq::datastore_exception (this->db);
 }
 
