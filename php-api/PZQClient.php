@@ -105,6 +105,9 @@ class PZQConsumer
                             $ctx, 
                             ($is_pub ? ZMQ::SOCKET_SUB : ZMQ::SOCKET_PULL));
 
+        if ($is_pub)
+            $this->socket->setSockOpt (ZMQ::SOCKOPT_SUBSCRIBE, "");
+
         $this->socket->connect ($dsn);
         
         $this->ack_socket = new ZMQSocket ($ctx, ZMQ::SOCKET_PUSH);
