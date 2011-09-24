@@ -24,8 +24,7 @@ namespace po = boost::program_options;
 
 volatile sig_atomic_t keep_running = 1;
 
-void
-time_to_go (int signum)
+void time_to_go (int signum)
 {
     keep_running = 0;
 }
