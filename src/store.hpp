@@ -65,9 +65,11 @@ namespace pzq {
         TreeDB db;
 		CacheDB inflight_db;
         int m_divisor;
+        int m_ack_timeout;
+        bool m_hard_sync;
 
     public:
-        datastore_t () : m_divisor (0)
+        datastore_t () : m_divisor (0), m_ack_timeout (5), m_hard_sync (false)
         {}
 
         void open (const std::string &path, uint64_t inflight_size);
@@ -91,7 +93,19 @@ namespace pzq {
             m_divisor = divisor;
         }
 
+        void set_ack_timeout (int ack_timeout)
+        {
+            m_ack_timeout = ack_timeout;
+        }
+
+        void set_hard_sync (bool sync)
+        {
+            m_hard_sync = sync;
+        }
+
         void iterate (DB::Visitor *visitor);
+
+        ~datastore_t ();
     };
 
     class datastore_exception : public std::exception

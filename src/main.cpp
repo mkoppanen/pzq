@@ -18,8 +18,17 @@
 #include "receiver.hpp"
 #include "sender.hpp"
 #include <boost/program_options.hpp>
+#include <signal.h>
 
 namespace po = boost::program_options;
+
+sig_atomic_t keep_running = 1;
+
+void
+time_to_go (int signum)
+{
+    keep_running = 0;
+}
 
 int main (int argc, char *argv []) 
 {
@@ -28,6 +37,8 @@ int main (int argc, char *argv [])
     std::string filename;
     int ack_timeout, sync_divisor;
     uint64_t inflight_size;
+    bool hard_sync;
+    std::string receive_dsn, ack_dsn, publish_dsn;
 
     desc.add_options ()
         ("help", "produce help message");
@@ -46,8 +57,13 @@ int main (int argc, char *argv [])
 
     desc.add_options()
         ("sync-divisor",
-          po::value<int> (&sync_divisor)->default_value (1000),
-         "The divisor for hard sync to the disk. 0 causes hard sync after every message")
+          po::value<int> (&sync_divisor)->default_value (0),
+         "The divisor for sync to the disk. 0 causes sync after every message")
+    ;
+
+    desc.add_options()
+        ("hard-sync",
+         "If enabled the data is flushed to disk on every sync")
     ;
 
     desc.add_options()
@@ -56,6 +72,28 @@ int main (int argc, char *argv [])
          "Maximum size in bytes for the in-flight messages database. Full database causes LRU collection")
     ;
 
+    desc.add_options()
+        ("receive-dsn",
+          po::value<std::string> (&receive_dsn)->default_value ("tcp://*:11131"),
+         "The DSN for the receive socket")
+    ;
+
+    desc.add_options()
+        ("ack-dsn",
+          po::value<std::string> (&ack_dsn)->default_value ("tcp://*:11132"),
+         "The DSN for the ACK socket")
+    ;
+
+    desc.add_options()
+        ("publish-dsn",
+          po::value<std::string> (&publish_dsn)->default_value ("tcp://*:11133"),
+         "The DSN for the backend client communication socket")
+    ;
+
+    desc.add_options()
+        ("use-pubsub",
+         "Changes the backend client communication socket to use publish subscribe pattern")
+    ;
     try {
         po::store (po::parse_command_line (argc, argv, desc), vm);
         po::notify (vm);
@@ -64,14 +102,41 @@ int main (int argc, char *argv [])
         std::cerr << desc << std::endl;
         return 1;
     }
-
     if (vm.count ("help")) {
         std::cerr << desc << std::endl;
         return 1;
     }
 
+    // Init new zeromq context
     zmq::context_t context (1);
+
+    // Init datastore
+    boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
+    store.get ()->set_sync_divisor (sync_divisor);
+    store.get ()->open (filename, inflight_size);
+    store.get ()->set_ack_timeout (ack_timeout);
+
+    if (vm.count ("hard-sync")) {
+        store.get ()->set_hard_sync (true);
+    }
+
+    // Init sender
+    bool use_pubsub = vm.count ("use-pubsub") ? true : false;
+    boost::shared_ptr<pzq::sender_t> sender (new pzq::sender_t (context, publish_dsn, use_pubsub));
+    sender.get ()->set_datastore (store);
+
+    // Wire the receiver
     pzq::receiver_t receiver (context, filename, sync_divisor, inflight_size);
+    receiver.set_sender (sender);
+    receiver.set_datastore (store);
+
+    // Install signal handlers
+    if (signal (SIGINT, time_to_go) == SIG_IGN)
+      signal (SIGINT, SIG_IGN);
+    if (signal (SIGHUP, time_to_go) == SIG_IGN)
+      signal (SIGHUP, SIG_IGN);
+    if (signal (SIGTERM, time_to_go) == SIG_IGN)
+      signal (SIGTERM, SIG_IGN);
 
     receiver.start ();
     receiver.wait ();

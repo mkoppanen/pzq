@@ -16,14 +16,15 @@
 
 #include "sender.hpp"
 
-pzq::sender_t::sender_t (zmq::context_t &ctx)
+pzq::sender_t::sender_t (zmq::context_t &ctx, std::string &dsn, bool use_pub)
 {
     uint64_t hwm = 1;
 	int linger = 1000;
+    int type = (use_pub) ? ZMQ_PUB : ZMQ_PUSH;
 
-    m_socket.reset (new zmq::socket_t (ctx, ZMQ_PUSH));
+    m_socket.reset (new zmq::socket_t (ctx, type));
     m_socket.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-    m_socket.get ()->bind ("tcp://127.0.0.1:11133");
+    m_socket.get ()->bind (dsn.c_str ());
 	m_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
 }
 

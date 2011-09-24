@@ -30,7 +30,7 @@ namespace pzq
 		boost::shared_ptr<pzq::datastore_t> m_store;
 
     public:
-        sender_t (zmq::context_t &ctx);
+        sender_t (zmq::context_t &ctx, std::string &dsn, bool use_pub);
 
 		void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
 		{

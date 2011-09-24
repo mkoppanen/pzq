@@ -31,15 +31,36 @@ namespace pzq
     {
     protected:
         boost::scoped_ptr<zmq::socket_t> m_socket;
-        boost::scoped_ptr<zmq::socket_t> m_delete_socket;
+        boost::scoped_ptr<zmq::socket_t> m_ack_socket;
 
-        pzq::sender_t    m_sender;
+        boost::shared_ptr<pzq::sender_t> m_sender;
         boost::shared_ptr<pzq::datastore_t> m_store;
+        std::string m_receive_dsn, m_ack_dsn;
 
 		bool send_response (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status);
 
     public:
         receiver_t (zmq::context_t &ctx, std::string &database_file, int divisor, uint64_t inflight_size);
+
+        void set_receive_dsn (std::string &receive_dsn)
+        {
+            m_receive_dsn = receive_dsn;
+        }
+
+        void set_ack_dsn (std::string &ack_dsn)
+        {
+            m_ack_dsn = ack_dsn;
+        }
+
+        void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
+        {
+            m_store = store;
+        }
+
+        void set_sender (boost::shared_ptr<pzq::sender_t> sender)
+        {
+            m_sender = sender;
+        }
 
         void run ();
     };

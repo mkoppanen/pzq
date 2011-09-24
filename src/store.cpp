@@ -82,10 +82,12 @@ void pzq::datastore_t::sync ()
 {
 	if (m_divisor == 0 || (rand () % m_divisor) == 0)
 	{
-        if (!this->db.synchronize (true))
+	    std::cerr << "Syncing to disk" << std::endl;
+
+        if (!this->db.synchronize (m_hard_sync))
             throw pzq::datastore_exception (this->db);
 
-		if (!this->inflight_db.synchronize (true))
+		if (!this->inflight_db.synchronize (m_hard_sync))
             throw pzq::datastore_exception (this->db);
 
 		std::cerr << "Size of database: " << this->db.size () << std::endl;
@@ -119,8 +121,7 @@ bool pzq::datastore_t::is_in_flight (const std::string &k)
 	if (this->inflight_db.get (k.c_str (), k.size (), (char *) &value, sizeof (uint64_t)) == -1)
 		return false;
 
-	// TODO: hardcoded timeout
-	if (time (NULL) - value > 5)
+	if (time (NULL) - value > m_ack_timeout)
 	{
 		this->inflight_db.remove (k.c_str (), k.size ());
 		std::cerr << "Message expired, scheduling for resend" << std::endl;
@@ -141,4 +142,11 @@ void pzq::datastore_t::iterate (DB::Visitor *visitor)
         throw pzq::datastore_exception (this->db);
 
 	sync ();
+}
+
+pzq::datastore_t::~datastore_t ()
+{
+    std::cerr << "Closing down datastore" << std::endl;
+    db.close ();
+    inflight_db.close ();
 }

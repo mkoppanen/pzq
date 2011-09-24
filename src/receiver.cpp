@@ -16,26 +16,17 @@
 
 #include "receiver.hpp"
 
-pzq::receiver_t::receiver_t (zmq::context_t &ctx, std::string &database_file, int divisor, uint64_t inflight_size) : m_sender (ctx)
+extern sig_atomic_t keep_running;
+
+pzq::receiver_t::receiver_t (zmq::context_t &ctx, std::string &database_file, int divisor, uint64_t inflight_size) : m_receive_dsn ("tcp://*:11131"), m_ack_dsn ("tcp://*:11132")
 {
-	m_store.reset (new pzq::datastore_t ());
-
-    m_store.get ()->set_sync_divisor (divisor);
-    m_store.get ()->open (database_file, inflight_size);
-
-	m_sender.set_datastore (m_store);
-
 	int linger = 1000;
 
     m_socket.reset (new zmq::socket_t (ctx, ZMQ_XREP));
-    m_socket.get ()->bind ("tcp://*:11131");
 	m_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
 
-    m_delete_socket.reset (new zmq::socket_t (ctx, ZMQ_PULL));
-    m_delete_socket.get ()->bind ("tcp://*:11132");
-	m_delete_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-
-    std::cerr << "Loaded " << m_store.get ()->messages () << " messages from store" << std::endl;
+    m_ack_socket.reset (new zmq::socket_t (ctx, ZMQ_PULL));
+	m_ack_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
 }
 
 bool pzq::receiver_t::send_response (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status)
@@ -64,6 +55,12 @@ bool pzq::receiver_t::send_response (boost::shared_ptr<zmq::message_t> peer_id, 
 
 void pzq::receiver_t::run ()
 {
+    std::cerr << "Loaded " << m_store.get ()->messages () << " messages from store" << std::endl;
+
+    // Init sockets
+    m_socket.get ()->bind (m_receive_dsn.c_str ());
+    m_ack_socket.get ()->bind (m_ack_dsn.c_str ());
+
     int rc;
     zmq::pollitem_t items [2];
     items [0].socket = *m_socket;
@@ -71,12 +68,12 @@ void pzq::receiver_t::run ()
     items [0].events = ZMQ_POLLIN;
     items [0].revents = 0;
 
-    items [1].socket = *m_delete_socket;
+    items [1].socket = *m_ack_socket;
     items [1].fd = 0;
     items [1].events = ZMQ_POLLIN;
     items [1].revents = 0;
 
-    while (true) { 
+    while (keep_running) { 
         try {
             int timeout = (m_store.get ()->messages () > 0) ? 10000 : -1;
             rc = zmq::poll (&items [0], 2, timeout);
@@ -129,16 +126,16 @@ void pzq::receiver_t::run ()
 			zmq::message_t message;
 
 			// Delete socket handling
-			m_delete_socket.get ()->recv (&message, 0);
+			m_ack_socket.get ()->recv (&message, 0);
 
 			std::string key (static_cast <char *>(message.data ()), message.size ());
 			m_store.get ()->remove (key);
 		}
 
-        if (m_store.get ()->messages () > 0 && m_sender.can_write ())
+        if (m_store.get ()->messages () > 0 && m_sender.get ()->can_write ())
         {
             try {
-                m_store.get ()->iterate (&m_sender);
+                m_store.get ()->iterate (m_sender.get ());
             } catch (std::exception &e) {
                 std::cerr << "Datastore iteration stopped: " << e.what () << std::endl;
             }
