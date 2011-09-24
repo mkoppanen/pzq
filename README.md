@@ -42,14 +42,12 @@ it for retransmission.
 
 --sync-divisor
 Sync divisor is used to determine how often the messages should be flushed
-to disk. Effectively, on each operation a random number between 0 and 
-sync_divisor is chosen and if the number is 0 then a sync is done. Setting 
-higher sync divisor causes things to run faster but this comes with the cost
-of possibly more messages lost on crash.
+to disk. On each operation a random number between 0 and sync_divisor is chosen and if the number is 0 then a sync is done. Setting  higher sync
+divisor causes things to run faster but this comes at the cost of possibly 
+losing more messages on crash.
 
 --hard-sync
-Hard syncing will cause the database to sync all the way to the physical
-device, which again makes things a bit more secure at the cost of performance.
+true for physical synchronization with the device, or false for logical synchronization with the file system. Defaults to false.
 
 --inflight-size
 Defines the maximum size in bytes for the messages that are in flight. Setting
