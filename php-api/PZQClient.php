@@ -130,15 +130,3 @@ class PZQConsumer
     }
 }
 
-/*
-$p = new PZQProducer ("tcp://127.0.0.1:11131");
-
-$message = new PZQMessage ();
-$message->setId ("hello");
-$message->setMessage (array ("hello there", "second"));
-
-$p->produce ($message);
-
-$c = new PZQConsumer ("tcp://127.0.0.1:11133", "tcp://127.0.0.1:11132");
-var_dump ($c->consume ());
-*/
