@@ -47,7 +47,8 @@ divisor causes things to run faster but this comes at the cost of possibly
 losing more messages on crash.
 
 --hard-sync
-true for physical synchronization with the device, or false for logical synchronization with the file system. Defaults to false.
+Define this option for physical synchronization with the device, or leave out
+for logical synchronization with the file system.
 
 --inflight-size
 Defines the maximum size in bytes for the messages that are in flight. Setting
