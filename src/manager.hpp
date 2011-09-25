@@ -30,14 +30,16 @@ namespace pzq {
     private:
         boost::shared_ptr<zmq::socket_t> m_in;
         boost::shared_ptr<zmq::socket_t> m_out;
+        boost::shared_ptr<zmq::socket_t> m_monitor;
         boost::shared_ptr<pzq::datastore_t> m_store;
         pzq::visitor_t m_visitor;
 
     public:
-        void set_sockets (boost::shared_ptr<zmq::socket_t> in, boost::shared_ptr<zmq::socket_t> out)
+        void set_sockets (boost::shared_ptr<zmq::socket_t> in, boost::shared_ptr<zmq::socket_t> out, boost::shared_ptr<zmq::socket_t> monitor)
         {
             m_in = in;
             m_out = out;
+            m_monitor = monitor;
             m_visitor.set_socket (m_out);
         }
 

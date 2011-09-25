@@ -78,7 +78,7 @@ int main (int argc, char *argv [])
     ;
 
     desc.add_options()
-        ("publish-dsn",
+        ("send-dsn",
           po::value<std::string> (&sender_dsn)->default_value ("tcp://*:11132"),
          "The DSN for the backend client communication socket")
     ;
@@ -89,16 +89,6 @@ int main (int argc, char *argv [])
          "The DSN for the monitoring socket")
     ;
 
-    desc.add_options()
-        ("uuid",
-          po::value<std::string> (&peer_uuid),
-         "UUID for this instance of PZQ. If none is set one is generated automatically")
-    ;
-
-    desc.add_options()
-        ("use-pubsub",
-         "Changes the backend client communication socket to use publish subscribe pattern")
-    ;
     try {
         po::store (po::parse_command_line (argc, argv, desc), vm);
         po::notify (vm);
@@ -111,6 +101,9 @@ int main (int argc, char *argv [])
         std::cerr << desc << std::endl;
         return 1;
     }
+    signal (SIGINT, time_to_go);
+    signal (SIGHUP, time_to_go);
+    signal (SIGTERM, time_to_go);
 
     // Init new zeromq context
     zmq::context_t context (1);
@@ -169,64 +162,22 @@ int main (int argc, char *argv [])
         manager_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
         manager_out.get ()->connect ("inproc://sender-inproc");
 
+        boost::shared_ptr<zmq::socket_t> monitor (new zmq::socket_t (context, ZMQ_ROUTER));
+        monitor.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        monitor.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+        monitor.get ()->bind (monitor_dsn.c_str ());
+
         boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
         store.get ()->set_sync_divisor (sync_divisor);
         store.get ()->set_ack_timeout (ack_timeout);
         store.get ()->open (filename, inflight_size);
         manager.set_datastore (store);
 
-        manager.set_sockets (manager_in, manager_out);
+        manager.set_sockets (manager_in, manager_out, monitor);
         manager.start ();
     } catch (std::exception &e) {
         std::cerr << "Error starting store manager: " << e.what () << std::endl;
         return 1;
     }
-
-    return 0;
-#if 0
-    // Init datastore
-    boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
-    store.get ()->set_sync_divisor (sync_divisor);
-    store.get ()->open (filename, inflight_size);
-    store.get ()->set_ack_timeout (ack_timeout);
-
-    if (vm.count ("hard-sync")) {
-        store.get ()->set_hard_sync (true);
-    }
-
-    // Init sender
-    bool use_pubsub = vm.count ("use-pubsub") ? true : false;
-    boost::shared_ptr<pzq::sender_t> sender (new pzq::sender_t (context, publish_dsn, use_pubsub));
-    sender.get ()->set_datastore (store);
-
-    if (peer_uuid.size () > 0)
-    {
-        try {
-            sender.get ()->set_peer_uuid (peer_uuid);
-        } catch (std::runtime_error &e) {
-            std::cerr << e.what () << std::endl;
-            return 1;
-        }
-    }
-
-    // Wire the receiver
-    pzq::receiver_t receiver (context, filename, sync_divisor, inflight_size);
-    receiver.set_sender (sender);
-    receiver.set_datastore (store);
-
-    // Monitoring
-    pzq::monitor_t monitor (context, monitor_dsn, 10);
-    monitor.set_datastore (store);
-    monitor.start ();
-
-    // Install signal handlers
-    signal (SIGINT, time_to_go);
-    signal (SIGHUP, time_to_go);
-    signal (SIGTERM, time_to_go);
-
-    receiver.start ();
-    receiver.wait ();
-    monitor.wait ();
-#endif
     return 0;
 }

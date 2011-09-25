@@ -20,9 +20,7 @@ class PZQClientException extends Exception {}
 class PZQMessage
 {
     private $_id = null;
-    
-    private $_origin = null;
-    
+
     private $_peer = null;
     
     private $_message = null;
@@ -36,17 +34,7 @@ class PZQMessage
     {
         return $this->_id = $id;
     }
-    
-    public function getOrigin ()
-    {
-        return $this->_origin;
-    }
-    
-    public function setOrigin ($origin)
-    {
-        return $this->_origin = $origin;
-    }
-    
+
     public function getPeer ()
     {
         return $this->_peer;
@@ -74,13 +62,22 @@ class PZQProducer
     
     private $poll;
     
-    public function __construct ($dsn)
+    public function __construct ($dsn = null)
     {
         $this->socket = new ZMQSocket (new ZMQContext (), ZMQ::SOCKET_XREQ);
-        $this->socket->connect ($dsn);
+        
+        if ($dsn)
+        {
+            $this->connect ($dsn);
+        }
         
         $this->poll = new ZMQPoll ();
         $this->poll->add ($this->socket, ZMQ::POLL_IN);
+    }
+    
+    public function connect ($dsn)
+    {
+        $this->socket->connect ($dsn);
     }
     
     public function produce (PZQMessage $message, $timeout = 5000)
@@ -119,18 +116,19 @@ class PZQConsumer
 {
     private $socket;
 
-    public function __construct ($dsn, $is_pub = false)
+    public function __construct ($dsn = null)
     {
         $ctx = new ZMQContext ();
-        
         $this->socket = new ZMQSocket ($ctx, ZMQ::SOCKET_XREP);
-        $this->socket->connect ($dsn);
+        if ($dsn)
+        {
+            $this->connect ($dsn);
+        }
     }
     
-    public function connect ($dsn, $ack_dsn)
+    public function connect ($dsn)
     {
         $this->socket->connect ($dsn);
-        $this->ack_socket->connect ($ack_dsn);
     }
     
     public function consume ($block = true)
@@ -172,7 +170,7 @@ class PZQMonitor
     public function get_stats ()
     {
         $this->socket->send ("MONITOR");
-        
+
         $message = $this->socket->recv ();
         $parts = explode ("\n", $message);
         $parts = array_filter ($parts);

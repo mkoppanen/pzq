@@ -17,6 +17,8 @@
 #include "pzq.hpp"
 #include "manager.hpp"
 
+extern sig_atomic_t keep_running;
+
 bool pzq::manager_t::send_ack (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status)
 {
     // The peer identifier
@@ -44,7 +46,7 @@ bool pzq::manager_t::send_ack (boost::shared_ptr<zmq::message_t> peer_id, boost:
 void pzq::manager_t::run ()
 {
     int rc;
-    zmq::pollitem_t items [2];
+    zmq::pollitem_t items [3];
     items [0].socket  = *m_in;
     items [0].fd      = 0;
     items [0].events  = ZMQ_POLLIN;
@@ -55,7 +57,12 @@ void pzq::manager_t::run ()
     items [1].events  = ZMQ_POLLIN;
     items [1].revents = 0;
 
-    while (1) {
+    items [2].socket  = *m_monitor;
+    items [2].fd      = 0;
+    items [2].events  = ZMQ_POLLIN;
+    items [2].revents = 0;
+
+    while (keep_running) {
         bool messages_pending = m_store.get ()->messages_pending ();
 
         if (messages_pending)
@@ -64,7 +71,7 @@ void pzq::manager_t::run ()
             items [1].events  = ZMQ_POLLIN;
 
         try {
-            rc = zmq::poll (&items [0], 2, (messages_pending ? 100000 : -1));
+            rc = zmq::poll (&items [0], 3, (messages_pending ? 100000 : -1));
         } catch (std::exception& e) {
             std::cerr << e.what () << ". exiting.." << std::endl;
             break;
@@ -130,13 +137,62 @@ void pzq::manager_t::run ()
 
         if (items [1].revents & ZMQ_POLLOUT)
         {
-            if (messages_pending && m_visitor.can_write ())
+            if (messages_pending && m_visitor.can_write () && m_store.get ()->messages_in_flight () < 10)
             {
                 try {
                     m_store.get ()->iterate (&m_visitor);
                 } catch (std::exception &e) {
+#ifdef DEBUG
                     std::cerr << "Datastore iteration stopped: " << e.what () << std::endl;
+#endif
                 }
+            }
+        }
+
+        if (items [2].revents & ZMQ_POLLIN)
+        {
+            int64_t more;
+            size_t moresz = sizeof (int64_t);
+
+            zmq::message_t id;
+            m_monitor.get ()->recv (&id, ZMQ_NOBLOCK);
+
+            m_monitor.get ()->getsockopt (ZMQ_RCVMORE, &more, &moresz);
+            if (!more)
+                continue;
+
+            zmq::message_t blank;
+            m_monitor.get ()->recv (&blank, ZMQ_NOBLOCK);
+
+            m_monitor.get ()->getsockopt (ZMQ_RCVMORE, &more, &moresz);
+            if (!more)
+                continue;
+
+            zmq::message_t command;
+            m_monitor.get ()->recv (&command, ZMQ_NOBLOCK);
+
+            if (command.size () == strlen ("MONITOR") &&
+                !memcmp (command.data (), "MONITOR", command.size ()))
+            {
+                std::stringstream datas;
+                datas << "messages: "           << m_store.get ()->messages ()           << std::endl;
+                datas << "messages_in_flight: " << m_store.get ()->messages_in_flight () << std::endl;
+                datas << "db_size: "            << m_store.get ()->db_size ()            << std::endl;
+                datas << "in_flightdb_size: "   << m_store.get ()->inflight_db_size ()   << std::endl;
+                datas << "syncs: "              << m_store.get ()->num_syncs ()          << std::endl;
+                datas << "expired_messages: "   << m_store.get ()->num_expired ()        << std::endl;
+
+                m_monitor.get ()->send (id, ZMQ_SNDMORE);
+
+                zmq::message_t delim;
+                m_monitor.get ()->send (delim, ZMQ_SNDMORE);
+
+                std::string blob = datas.str ();
+
+                zmq::message_t message (blob.size ());
+                memcpy (message.data (), blob.c_str (), blob.size ());
+
+                m_monitor.get ()->send (message, 0);
             }
         }
     }

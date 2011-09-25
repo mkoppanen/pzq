@@ -73,6 +73,7 @@ namespace pzq
 
         	if (m_time - value > m_timeout)
         	{
+                std::cerr << "Removing expired record" << std::endl;
                 return Visitor::REMOVE;
         	}
             return Visitor::NOP;
