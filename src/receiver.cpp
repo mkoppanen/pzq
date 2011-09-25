@@ -132,7 +132,7 @@ void pzq::receiver_t::run ()
             try {
                 m_store.get ()->remove (key);
             } catch (std::exception &e) {
-                std::cerr << "Failed to remove record: " << std::string (static_cast <char *>(message.data ()), message.size ()) << std::endl;
+                std::cerr << "Failed to remove record: " << e.what () << std::endl;
             }
         }
 

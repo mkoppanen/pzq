@@ -130,3 +130,27 @@ class PZQConsumer
     }
 }
 
+class PZQMonitor
+{
+    private $socket;
+    
+    private $ack_socket;
+    
+    public function __construct ($dsn)
+    {
+        $ctx = new ZMQContext ();
+        
+        $this->socket = new ZMQSocket ($ctx, ZMQ::SOCKET_REQ);
+        $this->socket->connect ($dsn);
+    }
+    
+    public function get_stats ()
+    {
+        $this->socket->send ("MONITOR");
+        
+        $message = $this->socket->recv ();
+        $parts = explode ("\n", $message);
+        var_dump ($parts);
+    }
+}
+

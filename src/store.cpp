@@ -83,19 +83,13 @@ void pzq::datastore_t::sync ()
 {
 	if (m_divisor == 0 || (rand () % m_divisor) == 0)
 	{
-	    std::cerr << "Syncing to disk, hard: " << (m_hard_sync ? "yes" : "no") << std::endl;
-
         if (!this->db.synchronize (m_hard_sync))
             throw pzq::datastore_exception (this->db);
 
 		if (!this->inflight_db.synchronize (m_hard_sync))
             throw pzq::datastore_exception (this->inflight_db);
 
-		std::cerr << "Size of database: " << this->db.size () << std::endl;
-		std::cerr << "Number of entries: " << this->db.count () << std::endl;
-
-		std::cerr << "Size of inflight database: " << this->inflight_db.size () << std::endl;
-		std::cerr << "Number of inflight entries: " << this->inflight_db.count () << std::endl;
+        m_syncs++;
 	}
 }
 
@@ -113,11 +107,6 @@ void pzq::datastore_t::remove (const std::string &key)
 void pzq::datastore_t::close ()
 {
     this->db.close ();
-}
-
-int64_t pzq::datastore_t::messages ()
-{
-    return this->db.count ();
 }
 
 bool pzq::datastore_t::is_in_flight (const std::string &k)

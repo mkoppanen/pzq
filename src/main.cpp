@@ -17,6 +17,7 @@
 #include "pzq.hpp"
 #include "receiver.hpp"
 #include "sender.hpp"
+#include "monitor.hpp"
 #include <boost/program_options.hpp>
 #include <signal.h>
 
@@ -37,7 +38,7 @@ int main (int argc, char *argv [])
     int ack_timeout, sync_divisor;
     int64_t inflight_size;
     bool hard_sync;
-    std::string receive_dsn, ack_dsn, publish_dsn;
+    std::string receive_dsn, ack_dsn, publish_dsn, monitor_dsn;
 
     desc.add_options ()
         ("help", "produce help message");
@@ -90,6 +91,12 @@ int main (int argc, char *argv [])
     ;
 
     desc.add_options()
+        ("monitor-dsn",
+          po::value<std::string> (&monitor_dsn)->default_value ("ipc:///tmp/pzq-monitor"),
+         "The DSN for the monitoring socket")
+    ;
+
+    desc.add_options()
         ("use-pubsub",
          "Changes the backend client communication socket to use publish subscribe pattern")
     ;
@@ -128,6 +135,11 @@ int main (int argc, char *argv [])
     pzq::receiver_t receiver (context, filename, sync_divisor, inflight_size);
     receiver.set_sender (sender);
     receiver.set_datastore (store);
+
+    // Monitoring
+    pzq::monitor_t monitor (context, monitor_dsn, 10);
+    monitor.set_datastore (store);
+    monitor.start ();
 
     // Install signal handlers
     if (signal (SIGINT, time_to_go) == SIG_IGN)

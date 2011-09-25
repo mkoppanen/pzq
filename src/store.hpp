@@ -67,9 +67,10 @@ namespace pzq {
         int m_divisor;
         int m_ack_timeout;
         bool m_hard_sync;
+        uint64_t m_syncs;
 
     public:
-        datastore_t () : m_divisor (0), m_ack_timeout (5), m_hard_sync (false)
+        datastore_t () : m_divisor (0), m_ack_timeout (5), m_hard_sync (false), m_syncs (0)
         {}
 
         void open (const std::string &path, int64_t inflight_size);
@@ -82,9 +83,30 @@ namespace pzq {
 
         void close ();
 
-        int64_t messages ();
+        int64_t messages ()
+        {
+            return this->db.count ();
+        }
 
-        int64_t messages_in_flight ();
+        int64_t db_size ()
+        {
+            return this->db.size ();
+        }
+
+        int64_t messages_in_flight ()
+        {
+            return this->inflight_db.count ();
+        }
+
+        int64_t inflight_db_size ()
+        {
+            return this->inflight_db.size ();
+        }
+
+        uint64_t num_syncs ()
+        {
+            return m_syncs;
+        }
 
 		bool is_in_flight (const std::string &k);
 
