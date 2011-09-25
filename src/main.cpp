@@ -142,12 +142,9 @@ int main (int argc, char *argv [])
     monitor.start ();
 
     // Install signal handlers
-    if (signal (SIGINT, time_to_go) == SIG_IGN)
-      signal (SIGINT, SIG_IGN);
-    if (signal (SIGHUP, time_to_go) == SIG_IGN)
-      signal (SIGHUP, SIG_IGN);
-    if (signal (SIGTERM, time_to_go) == SIG_IGN)
-      signal (SIGTERM, SIG_IGN);
+    signal (SIGINT, time_to_go);
+    signal (SIGHUP, time_to_go);
+    signal (SIGTERM, time_to_go);
 
     receiver.start ();
     receiver.wait ();
