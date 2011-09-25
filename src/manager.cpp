@@ -137,6 +137,7 @@ void pzq::manager_t::run ()
 
         if (items [1].revents & ZMQ_POLLOUT)
         {
+            // TODO: messages in flight limit is hard coded
             if (messages_pending && m_visitor.can_write () && m_store.get ()->messages_in_flight () < 10)
             {
                 try {
