@@ -149,7 +149,15 @@ class PZQMonitor
         $message = $this->socket->recv ();
         $parts = explode ("\n", $message);
         $parts = array_filter ($parts);
-        return $parts;
+        
+        $data = array ();
+        foreach ($parts as $part)
+        {
+            $pieces = explode (': ', $part);
+            $data [$pieces [0]] = $pieces [1];
+        }
+        
+        return $data;
     }
 }
 
