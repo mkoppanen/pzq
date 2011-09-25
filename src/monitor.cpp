@@ -67,6 +67,7 @@ void pzq::monitor_t::run ()
             datas << "db_size: "            << m_store.get ()->db_size ()            << std::endl;
             datas << "in_flightdb_size: "   << m_store.get ()->inflight_db_size ()   << std::endl;
             datas << "syncs: "              << m_store.get ()->num_syncs ()          << std::endl;
+            datas << "expired_messages: "   << m_store.get ()->num_expired ()        << std::endl;
 
             m_socket.get ()->send (id, ZMQ_SNDMORE);
 

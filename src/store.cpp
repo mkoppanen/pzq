@@ -118,7 +118,7 @@ bool pzq::datastore_t::is_in_flight (const std::string &k)
 	if (time (NULL) - value > m_ack_timeout)
 	{
 		this->inflight_db.remove (k.c_str (), k.size ());
-		std::cerr << "Message expired, scheduling for resend" << std::endl;
+        m_expiration++;
 		return false;
 	}
 	return true;
