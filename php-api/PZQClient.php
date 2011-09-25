@@ -118,24 +118,13 @@ class PZQProducer
 class PZQConsumer 
 {
     private $socket;
-    
-    private $ack_socket;
-    
-    public function __construct ($dsn, $ack_dsn, $is_pub = false)
+
+    public function __construct ($dsn, $is_pub = false)
     {
         $ctx = new ZMQContext ();
         
-        $this->socket = new ZMQSocket (
-                            $ctx, 
-                            ($is_pub ? ZMQ::SOCKET_SUB : ZMQ::SOCKET_PULL));
-
-        if ($is_pub)
-            $this->socket->setSockOpt (ZMQ::SOCKOPT_SUBSCRIBE, "");
-
+        $this->socket = new ZMQSocket ($ctx, ZMQ::SOCKET_XREP);
         $this->socket->connect ($dsn);
-        
-        $this->ack_socket = new ZMQSocket ($ctx, ZMQ::SOCKET_PUSH);
-        $this->ack_socket->connect ($ack_dsn);
     }
     
     public function connect ($dsn, $ack_dsn)
@@ -153,11 +142,17 @@ class PZQConsumer
             
         $message = new PZQMessage ();
         $message->setPeer ($parts [0]);
-        $message->setId ($parts [2]);
-        $message->setMessage (array_slice ($parts, 4));
-        $message->setOrigin ($parts [3]);    
+        $message->setId ($parts [1]);
+        $message->setMessage (array_slice ($parts, 3));  
 
-        $this->ack_socket->send ($message->getId ());
+        $this->socket->sendMulti (
+                        array (
+                            $message->getPeer (), 
+                            "", 
+                            $message->getId ()
+                        )
+                    );
+
         return $message;
     }
 }

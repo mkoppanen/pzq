@@ -14,76 +14,61 @@
  *  limitations under the License.                 
  */
 
-#include "receiver.hpp"
+#include "pzq.hpp"
+#include "manager.hpp"
 
-extern sig_atomic_t keep_running;
-
-pzq::receiver_t::receiver_t (zmq::context_t &ctx, std::string &database_file, int divisor, uint64_t inflight_size) : m_receive_dsn ("tcp://*:11131"), m_ack_dsn ("tcp://*:11132")
-{
-    int linger = 1000;
-
-    m_socket.reset (new zmq::socket_t (ctx, ZMQ_XREP));
-    m_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-
-    m_ack_socket.reset (new zmq::socket_t (ctx, ZMQ_PULL));
-    m_ack_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-}
-
-bool pzq::receiver_t::send_response (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status)
+bool pzq::manager_t::send_ack (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status)
 {
     // The peer identifier
     zmq::message_t header (peer_id.get ()->size ());
     memcpy (header.data (), peer_id.get ()->data (), peer_id.get ()->size ());
-    m_socket.get ()->send (header, ZMQ_SNDMORE);
+    m_in.get ()->send (header, ZMQ_SNDMORE);
 
     // Blank part 
     zmq::message_t blank;
-    m_socket.get ()->send (blank, ZMQ_SNDMORE);
+    m_in.get ()->send (blank, ZMQ_SNDMORE);
 
     // The request id
     zmq::message_t rid (ticket.get ()->size ());
     memcpy (rid.data (), ticket.get ()->data (), ticket.get ()->size ());
-    m_socket.get ()->send (rid, ZMQ_SNDMORE);
+    m_in.get ()->send (rid, ZMQ_SNDMORE);
 
     // The request status
     zmq::message_t rstatus (status.size ());
     memcpy (rstatus.data (), status.c_str (), status.size ());
-    m_socket.get ()->send (rstatus, 0);
+    m_in.get ()->send (rstatus, 0);
 
     return true;
 }
 
-void pzq::receiver_t::run ()
+void pzq::manager_t::run ()
 {
-    std::cerr << "Loaded " << m_store.get ()->messages () << " messages from store" << std::endl;
-
-    // Init sockets
-    m_socket.get ()->bind (m_receive_dsn.c_str ());
-    m_ack_socket.get ()->bind (m_ack_dsn.c_str ());
-
     int rc;
     zmq::pollitem_t items [2];
-    items [0].socket = *m_socket;
-    items [0].fd = 0;
-    items [0].events = ZMQ_POLLIN;
+    items [0].socket  = *m_in;
+    items [0].fd      = 0;
+    items [0].events  = ZMQ_POLLIN;
     items [0].revents = 0;
 
-    items [1].socket = *m_ack_socket;
-    items [1].fd = 0;
-    items [1].events = ZMQ_POLLIN;
+    items [1].socket  = *m_out;
+    items [1].fd      = 0;
+    items [1].events  = ZMQ_POLLIN;
     items [1].revents = 0;
 
-    while (keep_running) { 
+    while (1) {
+        bool messages_pending = m_store.get ()->messages_pending ();
+
+        if (messages_pending)
+            items [1].events = ZMQ_POLLIN | ZMQ_POLLOUT;
+        else
+            items [1].events  = ZMQ_POLLIN;
+
         try {
-            int timeout = (m_store.get ()->messages () > 0) ? 10000 : 1000000;
-            rc = zmq::poll (&items [0], 2, timeout);
+            rc = zmq::poll (&items [0], 2, (messages_pending ? 100000 : -1));
         } catch (std::exception& e) {
             std::cerr << e.what () << ". exiting.." << std::endl;
             break;
         }
-
-        if (rc < 0)
-            throw std::runtime_error ("Failed to poll");
 
         if (items [0].revents & ZMQ_POLLIN)
         {
@@ -93,9 +78,9 @@ void pzq::receiver_t::run ()
 
             do {
                 boost::shared_ptr<zmq::message_t> message (new zmq::message_t ());
-                m_socket.get ()->recv (message.get (), 0);
+                m_in.get ()->recv (message.get (), 0);
 
-                m_socket.get ()->getsockopt (ZMQ_RCVMORE, &more, &moresz);
+                m_in.get ()->getsockopt (ZMQ_RCVMORE, &more, &moresz);
                 int flags = (more) ? ZMQ_SNDMORE : 0;
 
                 if (message.get ()->size () > 0)
@@ -113,37 +98,46 @@ void pzq::receiver_t::run ()
 
             try {
                 m_store.get ()->save (message_parts);
-                send_response (message_parts [0].first, ticket, "OK");
+                send_ack (message_parts [0].first, ticket, "OK");
             } catch (std::exception &e) {
                 std::cerr << "Failed to store message: " << e.what () << std::endl;
-                send_response (message_parts [0].first, ticket, "NOT OK");
+                send_ack (message_parts [0].first, ticket, "NOT OK");
             }
         }
 
         if (items [1].revents & ZMQ_POLLIN)
         {
+            int64_t more;
+            size_t moresz = sizeof (int64_t);
+
             // The item to delete
             zmq::message_t message;
 
             // Delete socket handling
-            m_ack_socket.get ()->recv (&message, 0);
+            m_out.get ()->recv (&message, 0);
+            m_out.get ()->getsockopt (ZMQ_RCVMORE, &more, &moresz);
 
-            std::string key (static_cast <char *>(message.data ()), message.size ());
-            try {
-                m_store.get ()->remove (key);
-            } catch (std::exception &e) {
-                std::cerr << "Failed to remove record: " << e.what () << std::endl;
+            if (!more)
+            {
+                std::string key (static_cast <char *>(message.data ()), message.size ());
+                try {
+                    m_store.get ()->remove (key);
+                } catch (std::exception &e) {
+                    std::cerr << "Failed to remove record: " << e.what () << std::endl;
+                }
             }
         }
 
-        if (m_store.get ()->messages () > 0 && m_sender.get ()->can_write ())
+        if (items [1].revents & ZMQ_POLLOUT)
         {
-            try {
-                m_store.get ()->iterate (m_sender.get ());
-            } catch (std::exception &e) {
-                std::cerr << "Datastore iteration stopped: " << e.what () << std::endl;
+            if (messages_pending && m_visitor.can_write ())
+            {
+                try {
+                    m_store.get ()->iterate (&m_visitor);
+                } catch (std::exception &e) {
+                    std::cerr << "Datastore iteration stopped: " << e.what () << std::endl;
+                }
             }
         }
     }
 }
-

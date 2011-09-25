@@ -14,32 +14,48 @@
  *  limitations under the License.                 
  */
 
-#ifndef PZQ_MONITOR_HPP
-# define PZQ_MONITOR_HPP
+#ifndef PZQ_MANAGER_HPP
+# define PZQ_MANAGER_HPP
 
 #include "pzq.hpp"
-
 #include "store.hpp"
+#include "visitor.hpp"
+
+using namespace kyotocabinet;
 
 namespace pzq {
 
-    class monitor_t : public runnable_t
+    class manager_t
     {
     private:
-        int m_frequency;
+        boost::shared_ptr<zmq::socket_t> m_in;
+        boost::shared_ptr<zmq::socket_t> m_out;
         boost::shared_ptr<pzq::datastore_t> m_store;
-        boost::scoped_ptr<zmq::socket_t> m_socket;
+        pzq::visitor_t m_visitor;
 
     public:
+        void set_sockets (boost::shared_ptr<zmq::socket_t> in, boost::shared_ptr<zmq::socket_t> out)
+        {
+            m_in = in;
+            m_out = out;
+            m_visitor.set_socket (m_out);
+        }
 
-        monitor_t (zmq::context_t &ctx, const std::string &dsn, int frequency);
-
-		void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
+        void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
 		{
 			m_store = store;
+			m_visitor.set_datastore (store);
 		}
 
+        void start ()
+        {
+            run ();
+        }
+
         void run ();
+
+        bool send_ack (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status);
     };
 }
+
 #endif

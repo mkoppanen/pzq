@@ -15,9 +15,8 @@
  */
 
 #include "pzq.hpp"
-#include "receiver.hpp"
-#include "sender.hpp"
-#include "monitor.hpp"
+#include "device.hpp"
+#include "manager.hpp"
 #include <boost/program_options.hpp>
 #include <signal.h>
 
@@ -32,13 +31,13 @@ void time_to_go (int signum)
 
 int main (int argc, char *argv []) 
 {
-    po::options_description desc("Command-line options");
+    po::options_description desc ("Command-line options");
     po::variables_map vm;
     std::string filename;
     int ack_timeout, sync_divisor;
     int64_t inflight_size;
     bool hard_sync;
-    std::string receive_dsn, ack_dsn, publish_dsn, monitor_dsn, peer_uuid;
+    std::string receiver_dsn, sender_dsn, monitor_dsn, peer_uuid;
 
     desc.add_options ()
         ("help", "produce help message");
@@ -74,19 +73,13 @@ int main (int argc, char *argv [])
 
     desc.add_options()
         ("receive-dsn",
-          po::value<std::string> (&receive_dsn)->default_value ("tcp://*:11131"),
+          po::value<std::string> (&receiver_dsn)->default_value ("tcp://*:11131"),
          "The DSN for the receive socket")
     ;
 
     desc.add_options()
-        ("ack-dsn",
-          po::value<std::string> (&ack_dsn)->default_value ("tcp://*:11132"),
-         "The DSN for the ACK socket")
-    ;
-
-    desc.add_options()
         ("publish-dsn",
-          po::value<std::string> (&publish_dsn)->default_value ("tcp://*:11133"),
+          po::value<std::string> (&sender_dsn)->default_value ("tcp://*:11132"),
          "The DSN for the backend client communication socket")
     ;
 
@@ -122,6 +115,75 @@ int main (int argc, char *argv [])
     // Init new zeromq context
     zmq::context_t context (1);
 
+    int linger = 1000;
+    uint64_t hwm = 1;
+
+    pzq::device_t receiver, sender;
+
+    try {
+        // Wire the receiver
+        boost::shared_ptr<zmq::socket_t> receiver_in (new zmq::socket_t (context, ZMQ_ROUTER));
+        receiver_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        receiver_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+        receiver_in.get ()->bind (receiver_dsn.c_str ());
+
+        boost::shared_ptr<zmq::socket_t> receiver_out (new zmq::socket_t (context, ZMQ_PAIR));
+        receiver_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        receiver_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+        receiver_out.get ()->bind ("inproc://receiver-inproc");
+
+        // Wire the sender
+        boost::shared_ptr<zmq::socket_t> sender_in (new zmq::socket_t (context, ZMQ_PAIR));
+        sender_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        sender_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+        sender_in.get ()->bind ("inproc://sender-inproc");
+
+        boost::shared_ptr<zmq::socket_t> sender_out (new zmq::socket_t (context, ZMQ_DEALER));
+        sender_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        sender_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+        sender_out.get ()->bind (sender_dsn.c_str ());
+
+        // Start the receiver device
+        receiver.set_sockets (receiver_in, receiver_out);
+        receiver.start ();
+
+        // Start the sender device
+        sender.set_sockets (sender_in, sender_out);
+        sender.start ();
+    } catch (std::exception &e) {
+        std::cerr << "Error starting listening sockets: " << e.what () << std::endl;
+        return 1;
+    }
+
+    // Start the store manager
+    pzq::manager_t manager;
+
+    try {
+        boost::shared_ptr<zmq::socket_t> manager_in (new zmq::socket_t (context, ZMQ_PAIR));
+        manager_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        manager_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+        manager_in.get ()->connect ("inproc://receiver-inproc");
+
+        boost::shared_ptr<zmq::socket_t> manager_out (new zmq::socket_t (context, ZMQ_PAIR));
+        manager_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        manager_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+        manager_out.get ()->connect ("inproc://sender-inproc");
+
+        boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
+        store.get ()->set_sync_divisor (sync_divisor);
+        store.get ()->set_ack_timeout (ack_timeout);
+        store.get ()->open (filename, inflight_size);
+        manager.set_datastore (store);
+
+        manager.set_sockets (manager_in, manager_out);
+        manager.start ();
+    } catch (std::exception &e) {
+        std::cerr << "Error starting store manager: " << e.what () << std::endl;
+        return 1;
+    }
+
+    return 0;
+#if 0
     // Init datastore
     boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
     store.get ()->set_sync_divisor (sync_divisor);
@@ -165,6 +227,6 @@ int main (int argc, char *argv [])
     receiver.start ();
     receiver.wait ();
     monitor.wait ();
-
+#endif
     return 0;
 }

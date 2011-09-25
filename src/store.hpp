@@ -25,41 +25,7 @@ namespace pzq {
 
     typedef char pzq_uuid_string_t [37];
 
-    class i_datastore_t
-    {
-    public:
-        // Called when the data store is opened
-        virtual void open (const std::string &path, int64_t inflight_size) = 0;
-
-        // Save a message and flags to datastore
-        virtual bool save (const std::vector <pzq_message> &message_parts) = 0;
-
-		// Delete message
-		virtual void remove (const std::string &) = 0;
-
-        // Close the store
-        virtual void close () = 0;
-
-		// sync to disk
-		virtual void sync () = 0;
-
-		// Whether message has been sent but no ACK yet
-		virtual bool is_in_flight (const std::string &k) = 0;
-
-		// Mark message sent (no ack yet)
-		virtual void mark_in_flight (const std::string &k) = 0;
-
-        // How many messages in total in store
-        virtual int64_t messages () = 0;
-
-        // Iterate using a visitor
-        virtual void iterate (DB::Visitor *visitor) = 0;
-
-        // virtual destructor
-        virtual ~i_datastore_t () {}
-    };
-
-    class datastore_t : public i_datastore_t
+    class datastore_t
     {
     protected:
         TreeDB db;
@@ -112,6 +78,8 @@ namespace pzq {
         {
             return m_expiration;
         }
+
+        bool messages_pending ();
 
 		bool is_in_flight (const std::string &k);
 

@@ -16,6 +16,7 @@
 
 #include <sys/time.h>
 #include "store.hpp"
+#include "visitor.hpp"
 #include <iostream>
 #include <exception>
 #include <boost/scoped_array.hpp>
@@ -31,6 +32,8 @@ void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
 
     if (this->db.open (p, TreeDB::OWRITER | TreeDB::OCREATE) == false)
         throw pzq::datastore_exception (this->db);
+
+    std::cerr << "Loaded " << this->db.count () << " messages from store" << std::endl;
 
 	p.append (".inflight");
 
@@ -136,6 +139,20 @@ void pzq::datastore_t::iterate (DB::Visitor *visitor)
         throw pzq::datastore_exception (this->db);
 
 	sync ();
+}
+
+bool pzq::datastore_t::messages_pending ()
+{
+    if (this->db.count () == 0) {
+        return false;
+    }
+    expiry_visitor_t v (m_ack_timeout);
+
+    if (!this->inflight_db.iterate (&v, true))
+        throw pzq::datastore_exception (this->db);
+
+    if (this->inflight_db.count () != this->db.count ())
+        return true;
 }
 
 pzq::datastore_t::~datastore_t ()

@@ -28,7 +28,7 @@ LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 LINK_DIRECTORIES(${ZeroMQ_LIBRARY_DIRS})
 LINK_DIRECTORIES(${kyotocabinet_LIBRARY_DIRS})
 
-ADD_EXECUTABLE(${MODULE_NAME} src/main.cpp src/receiver.cpp src/sender.cpp src/store.cpp src/monitor.cpp)
+ADD_EXECUTABLE(${MODULE_NAME} src/main.cpp src/manager.cpp src/store.cpp src/visitor.cpp)
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${Boost_LIBRARIES})
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${ZeroMQ_LIBRARIES})
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${kyotocabinet_LIBRARIES})
