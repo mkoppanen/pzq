@@ -150,7 +150,8 @@ class PZQMonitor
         
         $message = $this->socket->recv ();
         $parts = explode ("\n", $message);
-        var_dump ($parts);
+        $parts = array_filter ($parts);
+        return $parts;
     }
 }
 
