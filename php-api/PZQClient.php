@@ -133,9 +133,7 @@ class PZQConsumer
 class PZQMonitor
 {
     private $socket;
-    
-    private $ack_socket;
-    
+
     public function __construct ($dsn)
     {
         $ctx = new ZMQContext ();
