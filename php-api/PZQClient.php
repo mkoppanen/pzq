@@ -142,7 +142,11 @@ class PZQConsumer
         $message->setPeer ($parts [0]);
         $message->setId ($parts [1]);
         $message->setMessage (array_slice ($parts, 3));  
-
+        return $message;
+    }
+    
+    public function ack (PZQMessage $message)
+    {
         $this->socket->sendMulti (
                         array (
                             $message->getPeer (), 
@@ -150,8 +154,6 @@ class PZQConsumer
                             $message->getId ()
                         )
                     );
-
-        return $message;
     }
 }
 
