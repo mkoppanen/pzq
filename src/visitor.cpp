@@ -51,8 +51,8 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
         memcpy (msg.data (), vbuf + pos, msg_size);
         pos += msg_size;
 
-		if (!m_socket.get ()->send (msg, tmp_flags))
-        	throw std::runtime_error ("Failed to send the message part");
+        if (!m_socket.get ()->send (msg, tmp_flags))
+            throw std::runtime_error ("Failed to send the message part");
 
         more = (flags & ZMQ_SNDMORE);
     }
