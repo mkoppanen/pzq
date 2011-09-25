@@ -22,6 +22,7 @@
 #include <zmq.hpp>
 #include <kchashdb.h>
 #include <kccachedb.h>
+#include <uuid/uuid.h>
 
 namespace pzq 
 {

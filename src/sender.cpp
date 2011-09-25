@@ -26,6 +26,8 @@ pzq::sender_t::sender_t (zmq::context_t &ctx, std::string &dsn, bool use_pub)
     m_socket.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
     m_socket.get ()->bind (dsn.c_str ());
 	m_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+
+	uuid_generate (m_uuid);
 }
 
 bool pzq::sender_t::can_write ()
@@ -57,6 +59,16 @@ const char *pzq::sender_t::visit_full (const char *kbuf, size_t ksiz, const char
 
     if (!can_write ())
     	throw std::runtime_error ("The socket is in blocking state");
+
+    zmq::message_t id (sizeof (uuid_t));
+    memcpy (id.data (), m_uuid, sizeof (uuid_t));
+
+    if (!m_socket.get ()->send (id, ZMQ_SNDMORE))
+        throw std::runtime_error ("Failed to send peer identifier");
+
+    zmq::message_t delimiter;
+    if (!m_socket.get ()->send (delimiter, ZMQ_SNDMORE))
+        throw std::runtime_error ("Failed to send delimiter");
 
     zmq::message_t header (ksiz);
     memcpy (header.data (), kbuf, ksiz);

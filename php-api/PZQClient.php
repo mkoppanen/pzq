@@ -21,6 +21,10 @@ class PZQMessage
 {
     private $_id = null;
     
+    private $_origin = null;
+    
+    private $_peer = null;
+    
     private $_message = null;
 
     public function getId ()
@@ -32,6 +36,26 @@ class PZQMessage
     {
         return $this->_id = $id;
     }
+    
+    public function getOrigin ()
+    {
+        return $this->_origin;
+    }
+    
+    public function setOrigin ($origin)
+    {
+        return $this->_origin = $origin;
+    }
+    
+    public function getPeer ()
+    {
+        return $this->_peer;
+    }
+    
+    public function setPeer ($peer)
+    {
+        return $this->_peer = $peer;
+    }    
     
     public function getMessage ()
     {
@@ -114,18 +138,26 @@ class PZQConsumer
         $this->ack_socket->connect ($ack_dsn);
     }
     
+    public function connect ($dsn, $ack_dsn)
+    {
+        $this->socket->connect ($dsn);
+        $this->ack_socket->connect ($ack_dsn);
+    }
+    
     public function consume ($block = true)
     {
         $parts = $this->socket->recvMulti (($block ? 0 : ZMQ::MODE_NOBLOCK));
-        
+
         if ($parts === false)
             return false;
-
-        $this->ack_socket->send ($parts [0]);
-
+            
         $message = new PZQMessage ();
-        $message->setId ($parts [0]);
-        $message->setMessage (array_slice ($parts, 2));
+        $message->setPeer ($parts [0]);
+        $message->setId ($parts [2]);
+        $message->setMessage (array_slice ($parts, 4));
+        $message->setOrigin ($parts [3]);    
+
+        $this->ack_socket->send ($message->getId ());
         return $message;
     }
 }

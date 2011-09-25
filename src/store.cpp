@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.                 
  */
-#include <uuid/uuid.h>
+
 #include <sys/time.h>
 #include "store.hpp"
 #include <iostream>

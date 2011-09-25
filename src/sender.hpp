@@ -28,9 +28,16 @@ namespace pzq
     protected:
         boost::scoped_ptr<zmq::socket_t> m_socket;
 		boost::shared_ptr<pzq::datastore_t> m_store;
+        uuid_t m_uuid;
 
     public:
         sender_t (zmq::context_t &ctx, std::string &dsn, bool use_pub);
+
+        void set_peer_uuid (const std::string &peer_uuid)
+        {
+            if (uuid_parse (peer_uuid.c_str (), m_uuid) != 0)
+                throw std::runtime_error ("Failed to set peer identifier");
+        }
 
 		void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
 		{

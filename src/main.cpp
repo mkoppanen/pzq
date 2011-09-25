@@ -38,7 +38,7 @@ int main (int argc, char *argv [])
     int ack_timeout, sync_divisor;
     int64_t inflight_size;
     bool hard_sync;
-    std::string receive_dsn, ack_dsn, publish_dsn, monitor_dsn;
+    std::string receive_dsn, ack_dsn, publish_dsn, monitor_dsn, peer_uuid;
 
     desc.add_options ()
         ("help", "produce help message");
@@ -97,6 +97,12 @@ int main (int argc, char *argv [])
     ;
 
     desc.add_options()
+        ("uuid",
+          po::value<std::string> (&peer_uuid),
+         "UUID for this instance of PZQ. If none is set one is generated automatically")
+    ;
+
+    desc.add_options()
         ("use-pubsub",
          "Changes the backend client communication socket to use publish subscribe pattern")
     ;
@@ -130,6 +136,16 @@ int main (int argc, char *argv [])
     bool use_pubsub = vm.count ("use-pubsub") ? true : false;
     boost::shared_ptr<pzq::sender_t> sender (new pzq::sender_t (context, publish_dsn, use_pubsub));
     sender.get ()->set_datastore (store);
+
+    if (peer_uuid.size () > 0)
+    {
+        try {
+            sender.get ()->set_peer_uuid (peer_uuid);
+        } catch (std::runtime_error &e) {
+            std::cerr << e.what () << std::endl;
+            return 1;
+        }
+    }
 
     // Wire the receiver
     pzq::receiver_t receiver (context, filename, sync_divisor, inflight_size);
