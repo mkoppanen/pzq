@@ -148,6 +148,7 @@ int main (int argc, char *argv [])
 
     receiver.start ();
     receiver.wait ();
+    monitor.wait ();
 
     return 0;
 }

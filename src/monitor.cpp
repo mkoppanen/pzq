@@ -39,7 +39,7 @@ void pzq::monitor_t::run ()
     while (keep_running)
     {
         try {
-            rc = zmq::poll (&items [0], 1, -1);
+            rc = zmq::poll (&items [0], 1, 1000000);
         } catch (std::exception& e) {
             continue;
         }
