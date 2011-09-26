@@ -14,23 +14,23 @@
  *  limitations under the License.                 
  */
 
-#ifndef PZQ_HPP
-# define PZQ_HPP
+#ifndef PZQ_TIME_HPP
+# define PZQ_TIME_HPP
 
-#include <boost/scoped_ptr.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/bind.hpp>
-#include <zmq.hpp>
-#include <kchashdb.h>
-#include <kccachedb.h>
-#include <uuid/uuid.h>
+#include <sys/time.h>
 
-namespace pzq 
-{
-    typedef std::list <boost::shared_ptr <zmq::message_t> > pzq_mp_message;
+namespace pzq {
 
-    typedef std::list <boost::shared_ptr <zmq::message_t> >::iterator pzq_mp_message_it;
+    inline
+    uint64_t microsecond_timestamp ()
+    {
+        timeval tv;
+
+        if (::gettimeofday (&tv, NULL)) {
+            throw new std::runtime_error ("gettimeofday failed");
+        }
+        return static_cast<uint64_t> (tv.tv_sec) * 1000000ULL + static_cast<uint64_t> (tv.tv_usec);
+    }
 }
 
 #endif

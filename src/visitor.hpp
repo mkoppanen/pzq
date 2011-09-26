@@ -19,6 +19,8 @@
 
 #include "pzq.hpp"
 #include "store.hpp"
+#include "socket.hpp"
+#include "time.hpp"
 
 using namespace kyotocabinet;
 
@@ -27,7 +29,7 @@ namespace pzq
     class visitor_t : public DB::Visitor
     {
     private:
-        boost::shared_ptr<zmq::socket_t> m_socket;
+        boost::shared_ptr<pzq::socket_t> m_socket;
 		boost::shared_ptr<pzq::datastore_t> m_store;
         uuid_t m_uuid;
 
@@ -37,7 +39,7 @@ namespace pzq
             uuid_generate (m_uuid);
         }
 
-        void set_socket (boost::shared_ptr<zmq::socket_t> socket)
+        void set_socket (boost::shared_ptr<pzq::socket_t> socket)
         {
             m_socket = socket;
         }
@@ -57,19 +59,19 @@ namespace pzq
     class expiry_visitor_t : public DB::Visitor
     {
     private:
-        time_t m_time;
-        int m_timeout;
+        uint64_t m_time;
+        uint64_t m_timeout;
 
     public:
         expiry_visitor_t (int timeout) : m_timeout (timeout)
         {
-            m_time = time (NULL);
+            m_time = microsecond_timestamp ();
         }
 
         const char *visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp)
         {
-            int value;
-            memcpy (&value, vbuf, sizeof (int));
+            uint64_t value;
+            memcpy (&value, vbuf, sizeof (uint64_t));
 
         	if (m_time - value > m_timeout)
         	{

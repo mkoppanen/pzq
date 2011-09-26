@@ -17,6 +17,8 @@
 #include "pzq.hpp"
 #include "device.hpp"
 #include "manager.hpp"
+#include "socket.hpp"
+
 #include <boost/program_options.hpp>
 #include <signal.h>
 
@@ -34,8 +36,9 @@ int main (int argc, char *argv [])
     po::options_description desc ("Command-line options");
     po::variables_map vm;
     std::string filename;
-    int ack_timeout, sync_divisor;
+    int sync_divisor;
     int64_t inflight_size;
+    uint64_t ack_timeout;
     bool hard_sync;
     std::string receiver_dsn, sender_dsn, monitor_dsn, peer_uuid;
 
@@ -50,8 +53,8 @@ int main (int argc, char *argv [])
 
     desc.add_options()
         ("ack-timeout",
-          po::value<int> (&ack_timeout)->default_value (5),
-         "How long to wait for ACK before resending message (seconds)")
+          po::value<uint64_t> (&ack_timeout)->default_value (5000000),
+         "How long to wait for ACK before resending message (microseconds)")
     ;
 
     desc.add_options()
@@ -115,23 +118,23 @@ int main (int argc, char *argv [])
 
     try {
         // Wire the receiver
-        boost::shared_ptr<zmq::socket_t> receiver_in (new zmq::socket_t (context, ZMQ_ROUTER));
+        boost::shared_ptr<pzq::socket_t> receiver_in (new pzq::socket_t (context, ZMQ_ROUTER));
         receiver_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
         receiver_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
         receiver_in.get ()->bind (receiver_dsn.c_str ());
 
-        boost::shared_ptr<zmq::socket_t> receiver_out (new zmq::socket_t (context, ZMQ_PAIR));
+        boost::shared_ptr<pzq::socket_t> receiver_out (new pzq::socket_t (context, ZMQ_PAIR));
         receiver_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
         receiver_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
         receiver_out.get ()->bind ("inproc://receiver-inproc");
 
         // Wire the sender
-        boost::shared_ptr<zmq::socket_t> sender_in (new zmq::socket_t (context, ZMQ_PAIR));
+        boost::shared_ptr<pzq::socket_t> sender_in (new pzq::socket_t (context, ZMQ_PAIR));
         sender_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
         sender_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
         sender_in.get ()->bind ("inproc://sender-inproc");
 
-        boost::shared_ptr<zmq::socket_t> sender_out (new zmq::socket_t (context, ZMQ_DEALER));
+        boost::shared_ptr<pzq::socket_t> sender_out (new pzq::socket_t (context, ZMQ_DEALER));
         sender_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
         sender_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
         sender_out.get ()->bind (sender_dsn.c_str ());
@@ -152,28 +155,29 @@ int main (int argc, char *argv [])
     pzq::manager_t manager;
 
     try {
-        boost::shared_ptr<zmq::socket_t> manager_in (new zmq::socket_t (context, ZMQ_PAIR));
+        boost::shared_ptr<pzq::socket_t> manager_in (new pzq::socket_t (context, ZMQ_PAIR));
         manager_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
         manager_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
         manager_in.get ()->connect ("inproc://receiver-inproc");
 
-        boost::shared_ptr<zmq::socket_t> manager_out (new zmq::socket_t (context, ZMQ_PAIR));
+        boost::shared_ptr<pzq::socket_t> manager_out (new pzq::socket_t (context, ZMQ_PAIR));
         manager_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
         manager_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
         manager_out.get ()->connect ("inproc://sender-inproc");
 
-        boost::shared_ptr<zmq::socket_t> monitor (new zmq::socket_t (context, ZMQ_ROUTER));
+        boost::shared_ptr<pzq::socket_t> monitor (new pzq::socket_t (context, ZMQ_ROUTER));
         monitor.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
         monitor.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
         monitor.get ()->bind (monitor_dsn.c_str ());
 
         boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
         store.get ()->set_sync_divisor (sync_divisor);
-        store.get ()->set_ack_timeout (ack_timeout);
         store.get ()->open (filename, inflight_size);
-        manager.set_datastore (store);
 
+        manager.set_datastore (store);
+        manager.set_ack_timeout (ack_timeout);
         manager.set_sockets (manager_in, manager_out, monitor);
+
         manager.start ();
     } catch (std::exception &e) {
         std::cerr << "Error starting store manager: " << e.what () << std::endl;

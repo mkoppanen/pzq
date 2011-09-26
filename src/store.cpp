@@ -14,9 +14,10 @@
  *  limitations under the License.                 
  */
 
-#include <sys/time.h>
+#include "pzq.hpp"
 #include "store.hpp"
 #include "visitor.hpp"
+#include "time.hpp"
 #include <iostream>
 #include <exception>
 #include <boost/scoped_array.hpp>
@@ -42,39 +43,26 @@ void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
 		throw pzq::datastore_exception (this->db);
 }
 
-bool pzq::datastore_t::save (const std::vector <pzq_message> &message_parts)
+bool pzq::datastore_t::save (pzq_mp_message &parts)
 {
     pzq_uuid_string_t uuid_str;
-    timeval tv;
 	uuid_t uu;
 
-    if (::gettimeofday (&tv, NULL)) {
-        throw new std::runtime_error ("gettimeofday failed");
-    }
-
-    uuid_generate (uu);
+	uuid_generate (uu);
     uuid_unparse (uu, uuid_str);
 
     std::stringstream kval;
-    kval << tv.tv_sec * (uint64_t) 1000000 + tv.tv_usec;
-    kval << "|";
-    kval << uuid_str;
+    kval << pzq::microsecond_timestamp ();
+    kval << "|" << uuid_str;
 
     this->db.begin_transaction ();
 
-    for (std::vector<pzq_message>::size_type i = 0; i != message_parts.size (); i++)
+    for (pzq_mp_message_it it = parts.begin (); it != parts.end (); it++)
     {
-        int32_t flags;
-        size_t size;
-
-        flags = static_cast<int32_t> (message_parts [i].second);
-        this->db.append (kval.str ().c_str (), kval.str ().size (), (const char *) &flags, sizeof (int32_t));
-
-        size = message_parts [i].first->size ();
+        size_t size = (*it).get ()->size ();
         this->db.append (kval.str ().c_str (), kval.str ().size (), (const char *) &size, sizeof (size_t));
-
         this->db.append (kval.str ().c_str (), kval.str ().size (),
-                         (const char *) message_parts [i].first->data (), message_parts [i].first->size ());
+                         (const char *) (*it).get ()->data (), (*it).get ()->size ());
     }
     this->db.end_transaction ();
 	sync ();
@@ -114,11 +102,11 @@ void pzq::datastore_t::close ()
 
 bool pzq::datastore_t::is_in_flight (const std::string &k)
 {
-	int value;
-	if (this->inflight_db.get (k.c_str (), k.size (), (char *) &value, sizeof (int)) == -1)
+	uint64_t value;
+	if (this->inflight_db.get (k.c_str (), k.size (), (char *) &value, sizeof (uint64_t)) == -1)
 		return false;
 
-	if (time (NULL) - value > m_ack_timeout)
+	if (pzq::microsecond_timestamp () - value > m_ack_timeout)
 	{
 		this->inflight_db.remove (k.c_str (), k.size ());
         m_expiration++;
@@ -129,8 +117,8 @@ bool pzq::datastore_t::is_in_flight (const std::string &k)
 
 void pzq::datastore_t::mark_in_flight (const std::string &k)
 {
-	int value = time (NULL);
-    this->inflight_db.add (k.c_str (), k.size (), (const char *) &value, sizeof (int));
+	uint64_t value = pzq::microsecond_timestamp ();
+    this->inflight_db.add (k.c_str (), k.size (), (const char *) &value, sizeof (uint64_t));
 }
 
 void pzq::datastore_t::iterate (DB::Visitor *visitor)

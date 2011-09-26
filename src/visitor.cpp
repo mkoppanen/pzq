@@ -14,6 +14,7 @@
  *  limitations under the License.                 
  */
 #include "visitor.hpp"
+#include "time.hpp"
 
 bool pzq::visitor_t::can_write ()
 {
@@ -45,31 +46,42 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
     if (!can_write ())
     	throw std::runtime_error ("The socket is in blocking state");
 
-    zmq::message_t header (ksiz);
-    memcpy (header.data (), kbuf, ksiz);
+    pzq_mp_message parts;
 
-    if (!m_socket.get ()->send (header, ZMQ_SNDMORE))
-        throw std::runtime_error ("Failed to send the message header");
+    boost::shared_ptr<zmq::message_t> header (new zmq::message_t (ksiz));
+    memcpy (header.get ()->data (), kbuf, ksiz);
+    parts.push_back (header);
 
-    while (more)
+    // Time when the message goes out
+    std::stringstream mt;
+    mt << pzq::microsecond_timestamp ();
+
+    boost::shared_ptr<zmq::message_t> out_time (new zmq::message_t (mt.str ().size ()));
+    memcpy (out_time.get ()->data (), mt.str ().c_str (), mt.str ().size ());
+    parts.push_back (out_time);
+
+    std::stringstream expiry;
+    expiry << m_store.get ()->get_ack_timeout ();
+
+    boost::shared_ptr<zmq::message_t> ack_timeout (new zmq::message_t (expiry.str ().size ()));
+    memcpy (ack_timeout.get ()->data (), expiry.str ().c_str (), expiry.str ().size ());
+    parts.push_back (ack_timeout);
+
+    while (true)
     {
-        memcpy (&flags, vbuf + pos, sizeof (int32_t));
-        pos += sizeof (int32_t);
-
-        int tmp_flags = static_cast <int> (flags);
-
         memcpy (&msg_size, vbuf + pos, sizeof (size_t));
         pos += sizeof (size_t);
 
-        zmq::message_t msg (msg_size);
-        memcpy (msg.data (), vbuf + pos, msg_size);
+        boost::shared_ptr<zmq::message_t> part (new zmq::message_t (msg_size));
+        memcpy (part.get ()->data (), vbuf + pos, msg_size);
+        parts.push_back (part);
+
         pos += msg_size;
-
-        if (!m_socket.get ()->send (msg, tmp_flags))
-            throw std::runtime_error ("Failed to send the message part");
-
-        more = (flags & ZMQ_SNDMORE);
+        if (pos >= vsiz)
+            break;
     }
-    m_store->mark_in_flight (key);
+    if (m_socket.get ()->send_many (parts))
+        m_store->mark_in_flight (key);
+
     return NOP;
 }

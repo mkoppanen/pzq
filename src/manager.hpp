@@ -19,6 +19,7 @@
 
 #include "pzq.hpp"
 #include "store.hpp"
+#include "socket.hpp"
 #include "visitor.hpp"
 
 using namespace kyotocabinet;
@@ -28,19 +29,35 @@ namespace pzq {
     class manager_t
     {
     private:
-        boost::shared_ptr<zmq::socket_t> m_in;
-        boost::shared_ptr<zmq::socket_t> m_out;
-        boost::shared_ptr<zmq::socket_t> m_monitor;
+        boost::shared_ptr<pzq::socket_t> m_in;
+        boost::shared_ptr<pzq::socket_t> m_out;
+        boost::shared_ptr<pzq::socket_t> m_monitor;
         boost::shared_ptr<pzq::datastore_t> m_store;
         pzq::visitor_t m_visitor;
+        uint64_t m_ack_timeout;
+
+        void handle_receiver_in ();
+
+        void handle_sender_ack ();
+
+        void handle_sender_out ();
+
+        void handle_monitor_in ();
+
+        bool send_ack (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status);
 
     public:
-        void set_sockets (boost::shared_ptr<zmq::socket_t> in, boost::shared_ptr<zmq::socket_t> out, boost::shared_ptr<zmq::socket_t> monitor)
+        void set_sockets (boost::shared_ptr<pzq::socket_t> in, boost::shared_ptr<pzq::socket_t> out, boost::shared_ptr<pzq::socket_t> monitor)
         {
             m_in = in;
             m_out = out;
             m_monitor = monitor;
             m_visitor.set_socket (m_out);
+        }
+
+        void set_ack_timeout (uint64_t ack_timeout)
+        {
+            m_ack_timeout = ack_timeout;
         }
 
         void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
@@ -55,8 +72,6 @@ namespace pzq {
         }
 
         void run ();
-
-        bool send_ack (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status);
     };
 }
 

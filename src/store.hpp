@@ -31,17 +31,17 @@ namespace pzq {
         TreeDB db;
 		CacheDB inflight_db;
         int m_divisor;
-        int m_ack_timeout;
+        uint64_t m_ack_timeout;
         bool m_hard_sync;
         uint64_t m_syncs, m_expiration;
 
     public:
-        datastore_t () : m_divisor (0), m_ack_timeout (5), m_hard_sync (false), m_syncs (0), m_expiration (0)
+        datastore_t () : m_divisor (0), m_ack_timeout (5ULL), m_hard_sync (false), m_syncs (0), m_expiration (0)
         {}
 
         void open (const std::string &path, int64_t inflight_size);
 
-        bool save (const std::vector <pzq_message> &message_parts);
+        bool save (pzq_mp_message &message_parts);
 
 		void remove (const std::string &key);
 
@@ -90,9 +90,14 @@ namespace pzq {
             m_divisor = divisor;
         }
 
-        void set_ack_timeout (int ack_timeout)
+        void set_ack_timeout (uint64_t ack_timeout)
         {
             m_ack_timeout = ack_timeout;
+        }
+
+        uint64_t get_ack_timeout () const
+        {
+            return m_ack_timeout;
         }
 
         void set_hard_sync (bool sync)

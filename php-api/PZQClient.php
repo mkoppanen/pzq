@@ -19,40 +19,64 @@ class PZQClientException extends Exception {}
  
 class PZQMessage
 {
-    private $_id = null;
+    private $id = null;
+             
+    private $peer = null;
+             
+    private $message = null;
+             
+    private $sent = null;
+             
+    private $ack_timeout = null;
 
-    private $_peer = null;
-    
-    private $_message = null;
-
-    public function getId ()
+    public function get_id ()
     {
-        return $this->_id;
+        return $this->id;
     }
     
-    public function setId ($id)
+    public function set_id ($id)
     {
-        return $this->_id = $id;
-    }
-
-    public function getPeer ()
-    {
-        return $this->_peer;
+        return $this->id = $id;
     }
     
-    public function setPeer ($peer)
+    public function get_sent_time ()
     {
-        return $this->_peer = $peer;
+        return $this->sent;
+    }
+    
+    public function set_sent_time ($sent)
+    {
+        $this->sent = $sent;
     }    
     
-    public function getMessage ()
+    public function get_ack_timeout ()
     {
-        return $this->_message;
+        return $this->ack_timeout;
     }
     
-    public function setMessage ($message)
+    public function set_ack_timeout ($timeout)
     {
-        $this->_message = $message;
+        $this->ack_timeout = $timeout;
+    }
+
+    public function get_peer ()
+    {
+        return $this->peer;
+    }
+    
+    public function set_peer ($peer)
+    {
+        return $this->peer = $peer;
+    }    
+    
+    public function get_message ()
+    {
+        return $this->message;
+    }
+    
+    public function set_message ($message)
+    {
+        $this->message = $message;
     }
 }
 
@@ -82,8 +106,8 @@ class PZQProducer
     
     public function produce (PZQMessage $message, $timeout = 5000)
     {
-        $out = array ($message->getId (), "");
-        $m = $message->getMessage ();
+        $out = array ($message->get_id (), "");
+        $m = $message->get_message ();
         
         if (is_array ($m))
             $out = array_merge ($out, $m);
@@ -100,7 +124,7 @@ class PZQProducer
         
         $response = $this->socket->recvMulti ();
         
-        if ($response [1] != $message->getId ()) 
+        if ($response [1] != $message->get_id ()) 
             throw new PZQClientException ('Got ACK for wrong message');
 
         if ($response [2] != 'OK')
@@ -115,17 +139,25 @@ class PZQProducer
 class PZQConsumer 
 {
     private $socket;
+    
+    private $timeout;
+    
+    private $filter_expired = true;
 
     public function __construct ($dsn = null)
     {
         $ctx = new ZMQContext ();
         $this->socket = new ZMQSocket ($ctx, ZMQ::SOCKET_XREP);
+        
         if ($dsn)
-        {
             $this->connect ($dsn);
-        }
     }
     
+    public function set_filter_expired ($value)
+    {
+        $this->filter_expired = $value;
+    }
+
     public function connect ($dsn)
     {
         $this->socket->connect ($dsn);
@@ -137,21 +169,24 @@ class PZQConsumer
 
         if ($parts === false)
             return false;
-            
+
         $message = new PZQMessage ();
-        $message->setPeer ($parts [0]);
-        $message->setId ($parts [1]);
-        $message->setMessage (array_slice ($parts, 3));  
+        $message->set_peer ($parts [0]);
+        $message->set_id ($parts [1]);
+        $message->set_sent_time ($parts [2]);
+        $message->set_ack_timeout ($parts [3]);
+        $message->set_message (array_slice ($parts, 5));
+
         return $message;
     }
-    
+
     public function ack (PZQMessage $message)
     {
         $this->socket->sendMulti (
                         array (
-                            $message->getPeer (), 
+                            $message->get_peer (), 
                             "", 
-                            $message->getId ()
+                            $message->get_id ()
                         )
                     );
     }

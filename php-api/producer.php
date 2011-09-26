@@ -7,8 +7,8 @@ $p = new PZQProducer ("tcp://127.0.0.1:11131");
 for ($i = 0; $i < 1000; $i++)
 {
     $message = new PZQMessage ();
-    $message->setId ($i);
-    $message->setMessage (array ("hello there", "second"));
+    $message->set_id ($i);
+    $message->set_message (array ("hello there", "second"));
 
     $p->produce ($message);
 }
