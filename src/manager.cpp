@@ -80,7 +80,7 @@ void pzq::manager_t::handle_sender_ack ()
 void pzq::manager_t::handle_sender_out ()
 {
     // TODO: messages in flight limit is hard coded
-    if (m_visitor.can_write () && m_store.get ()->messages_in_flight () < 10)
+    if (m_visitor.can_write ())
     {
         try {
             m_store.get ()->iterate (&m_visitor);
@@ -101,12 +101,12 @@ void pzq::manager_t::handle_monitor_in ()
             !memcmp (message.back ().get ()->data (), "MONITOR", message.back ().get ()->size ()))
         {
             std::stringstream datas;
-            datas << "messages: "           << m_store.get ()->messages ()           << std::endl;
-            datas << "messages_in_flight: " << m_store.get ()->messages_in_flight () << std::endl;
-            datas << "db_size: "            << m_store.get ()->db_size ()            << std::endl;
-            datas << "in_flightdb_size: "   << m_store.get ()->inflight_db_size ()   << std::endl;
-            datas << "syncs: "              << m_store.get ()->num_syncs ()          << std::endl;
-            datas << "expired_messages: "   << m_store.get ()->num_expired ()        << std::endl;
+            datas << "messages: "           << m_store.get ()->messages ()             << std::endl;
+            datas << "messages_in_flight: " << m_store.get ()->messages_in_flight ()   << std::endl;
+            datas << "db_size: "            << m_store.get ()->db_size ()              << std::endl;
+            datas << "in_flightdb_size: "   << m_store.get ()->inflight_db_size ()     << std::endl;
+            datas << "syncs: "              << m_store.get ()->num_syncs ()            << std::endl;
+            datas << "expired_messages: "   << m_store.get ()->get_messages_expired () << std::endl;
 
             m_monitor.get ()->send (*message.front ().get (), ZMQ_SNDMORE);
 

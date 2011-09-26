@@ -85,3 +85,19 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
 
     return NOP;
 }
+
+const char *pzq::expiry_visitor_t::visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp)
+{
+    if (sizeof (uint64_t) != vsiz)
+        return Visitor::NOP;
+
+    uint64_t value;
+    memcpy (&value, vbuf, sizeof (uint64_t));
+
+	if (m_time - value > m_timeout)
+	{
+        m_store.get ()->message_expired ();
+        return Visitor::REMOVE;
+	}
+    return Visitor::NOP;
+}

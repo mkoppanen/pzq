@@ -18,6 +18,7 @@
 #include "device.hpp"
 #include "manager.hpp"
 #include "socket.hpp"
+#include "visitor.hpp"
 
 #include <boost/program_options.hpp>
 #include <signal.h>
@@ -38,7 +39,7 @@ int main (int argc, char *argv [])
     std::string filename;
     int sync_divisor;
     int64_t inflight_size;
-    uint64_t ack_timeout;
+    uint64_t ack_timeout, reaper_frequency;
     bool hard_sync;
     std::string receiver_dsn, sender_dsn, monitor_dsn, peer_uuid;
 
@@ -55,6 +56,12 @@ int main (int argc, char *argv [])
         ("ack-timeout",
           po::value<uint64_t> (&ack_timeout)->default_value (5000000),
          "How long to wait for ACK before resending message (microseconds)")
+    ;
+
+    desc.add_options()
+        ("reaper-frequency",
+          po::value<uint64_t> (&reaper_frequency)->default_value (2500000),
+         "How often to clean up expired messages (microseconds)")
     ;
 
     desc.add_options()
@@ -174,11 +181,17 @@ int main (int argc, char *argv [])
         store.get ()->set_sync_divisor (sync_divisor);
         store.get ()->open (filename, inflight_size);
 
+        // Reaper for expired messages
+        pzq::expiry_visitor_t reaper (store);
+        reaper.set_frequency (reaper_frequency);
+        reaper.set_ack_timeout (ack_timeout);
+        reaper.start ();
+
         manager.set_datastore (store);
         manager.set_ack_timeout (ack_timeout);
         manager.set_sockets (manager_in, manager_out, monitor);
 
-        manager.start ();
+        manager.run ();
     } catch (std::exception &e) {
         std::cerr << "Error starting store manager: " << e.what () << std::endl;
         return 1;

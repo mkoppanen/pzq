@@ -33,10 +33,11 @@ namespace pzq {
         int m_divisor;
         uint64_t m_ack_timeout;
         bool m_hard_sync;
-        uint64_t m_syncs, m_expiration;
+        uint64_t m_syncs, m_expired;
+        boost::mutex m_mutex;
 
     public:
-        datastore_t () : m_divisor (0), m_ack_timeout (5ULL), m_hard_sync (false), m_syncs (0), m_expiration (0)
+        datastore_t () : m_divisor (0), m_ack_timeout (5ULL), m_hard_sync (false), m_syncs (0), m_expired (0)
         {}
 
         void open (const std::string &path, int64_t inflight_size);
@@ -74,11 +75,6 @@ namespace pzq {
             return m_syncs;
         }
 
-        uint64_t num_expired ()
-        {
-            return m_expiration;
-        }
-
         bool messages_pending ();
 
 		bool is_in_flight (const std::string &k);
@@ -105,7 +101,24 @@ namespace pzq {
             m_hard_sync = sync;
         }
 
+        uint64_t get_messages_expired ()
+        {
+            m_mutex.lock ();
+            uint64_t expired = m_expired;
+            m_mutex.unlock ();
+            return expired;
+        }
+
+        void message_expired ()
+        {
+            m_mutex.lock ();
+            m_expired++;
+            m_mutex.unlock ();
+        }
+
         void iterate (DB::Visitor *visitor);
+
+        void iterate_inflight (DB::Visitor *visitor);
 
         ~datastore_t ();
     };

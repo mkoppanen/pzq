@@ -109,7 +109,7 @@ bool pzq::datastore_t::is_in_flight (const std::string &k)
 	if (pzq::microsecond_timestamp () - value > m_ack_timeout)
 	{
 		this->inflight_db.remove (k.c_str (), k.size ());
-        m_expiration++;
+        message_expired ();
 		return false;
 	}
 	return true;
@@ -129,16 +129,19 @@ void pzq::datastore_t::iterate (DB::Visitor *visitor)
 	sync ();
 }
 
+void pzq::datastore_t::iterate_inflight (DB::Visitor *visitor)
+{
+    if (!this->inflight_db.iterate (visitor, true))
+        throw pzq::datastore_exception (this->db);
+}
+
 bool pzq::datastore_t::messages_pending ()
 {
     if (this->db.count () == 0) {
         return false;
     }
-    expiry_visitor_t v (m_ack_timeout);
 
-    if (!this->inflight_db.iterate (&v, true))
-        throw pzq::datastore_exception (this->db);
-
+    this->inflight_db.occupy ();
     if (this->inflight_db.count () != this->db.count ())
         return true;
 }

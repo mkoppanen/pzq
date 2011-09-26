@@ -61,25 +61,44 @@ namespace pzq
     private:
         uint64_t m_time;
         uint64_t m_timeout;
+        uint64_t m_frequency;
+        boost::shared_ptr<boost::thread> m_thread;
+        boost::shared_ptr<pzq::datastore_t> m_store;
 
     public:
-        expiry_visitor_t (int timeout) : m_timeout (timeout)
+        expiry_visitor_t (boost::shared_ptr<pzq::datastore_t> store) : m_store (store)
+        {}
+
+        void start ()
         {
-            m_time = microsecond_timestamp ();
+            m_thread = boost::shared_ptr<boost::thread> (
+                            new boost::thread (
+                                boost::bind (&expiry_visitor_t::run, this)
+                            )
+                       );
         }
 
-        const char *visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp)
+        void set_frequency (uint64_t frequency)
         {
-            uint64_t value;
-            memcpy (&value, vbuf, sizeof (uint64_t));
-
-        	if (m_time - value > m_timeout)
-        	{
-                std::cerr << "Removing expired record" << std::endl;
-                return Visitor::REMOVE;
-        	}
-            return Visitor::NOP;
+            m_frequency = frequency;
         }
+
+        void set_ack_timeout (uint64_t timeout)
+        {
+            m_timeout = timeout;
+        }
+
+        void run ()
+        {
+            while (1)
+            {
+                m_time = microsecond_timestamp ();
+                m_store.get ()->iterate_inflight (this);
+                boost::this_thread::sleep (boost::posix_time::microseconds (m_frequency));
+            }
+        }
+
+        const char *visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp);
     };
 }
 
