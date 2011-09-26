@@ -72,7 +72,7 @@ void pzq::manager_t::handle_sender_ack ()
         try {
             m_store.get ()->remove (key);
         } catch (std::exception &e) {
-            std::cerr << "Failed to remove record: " << e.what () << std::endl;
+            std::cerr << "Not removing record: " << e.what () << std::endl;
         }
     }
 }

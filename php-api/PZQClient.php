@@ -141,6 +141,8 @@ class PZQConsumer
     private $socket;
     
     private $timeout;
+    
+    private $filter_expired = true;
 
     public function __construct ($dsn = null)
     {
@@ -149,6 +151,11 @@ class PZQConsumer
         
         if ($dsn)
             $this->connect ($dsn);
+    }
+    
+    public function set_filter_expired ($value)
+    {
+        $this->filter_expired = $value;
     }
 
     public function connect ($dsn)
@@ -170,9 +177,21 @@ class PZQConsumer
         $message->set_ack_timeout ($parts [3]);
         $message->set_message (array_slice ($parts, 5));
 
+        if ($this->filter_expired && $this->is_expired ($message)) {
+            return $this->consume ($block);
+        }
         return $message;
     }
+    
+    public function is_expired (PZQMessage $message)
+    {
+        $t    = microtime (true);
+        $sent = (float) ($message->get_sent_time () / 1000000);
+        $diff = $t - $sent;
 
+        return ($diff > ($message->get_ack_timeout ()/ 1000000));
+    }
+    
     public function ack (PZQMessage $message)
     {
         $this->socket->sendMulti (
