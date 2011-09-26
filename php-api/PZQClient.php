@@ -141,8 +141,6 @@ class PZQConsumer
     private $socket;
     
     private $timeout;
-    
-    private $filter_expired = true;
 
     public function __construct ($dsn = null)
     {
@@ -151,11 +149,6 @@ class PZQConsumer
         
         if ($dsn)
             $this->connect ($dsn);
-    }
-    
-    public function set_filter_expired ($value)
-    {
-        $this->filter_expired = $value;
     }
 
     public function connect ($dsn)
