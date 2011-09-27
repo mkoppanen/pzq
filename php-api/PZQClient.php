@@ -117,7 +117,7 @@ class PZQProducer
         $this->socket->sendMulti ($out);
         
         $r = $w = array ();
-        $this->poll->poll ($r, $w, 5000);
+        $this->poll->poll ($r, $w, $timeout);
         
         if (empty ($r))
             throw new PZQClientException ('ACK timeout');
