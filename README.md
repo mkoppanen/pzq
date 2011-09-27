@@ -54,6 +54,16 @@ Defines the maximum size in bytes for the messages that are in flight. Setting
 this database small can harm performance as LRU needs to run more often and 
 the messages that were in flight need to be retransmitted.
 
+Centos Notes
+======
+
+Older versions will require the boost141-devel package, available from EPEL. 
+
+Specify the location by building with 
+
+    $ cmake .. -DBOOST_INCLUDEDIR=/usr/include/boost141 -DBOOST_LIBRARYDIR=/usr/lib64/boost141
+
+
 
 TODO
 ====
