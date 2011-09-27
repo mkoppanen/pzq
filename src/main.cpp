@@ -118,7 +118,7 @@ int main (int argc, char *argv [])
 
     // Init new zeromq context
     zmq::context_t *context = new zmq::context_t (1);
-    
+
     {
         pzq::device_t receiver, sender;
 

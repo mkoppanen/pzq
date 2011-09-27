@@ -43,7 +43,7 @@ void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
 		throw pzq::datastore_exception (this->db);
 }
 
-bool pzq::datastore_t::save (pzq_mp_message &parts)
+bool pzq::datastore_t::save (pzq::message_t &parts)
 {
     pzq_uuid_string_t uuid_str;
 	uuid_t uu;
@@ -57,7 +57,7 @@ bool pzq::datastore_t::save (pzq_mp_message &parts)
 
     this->db.begin_transaction ();
 
-    for (pzq_mp_message_it it = parts.begin (); it != parts.end (); it++)
+    for (pzq::message_iterator_t it = parts.begin (); it != parts.end (); it++)
     {
         size_t size = (*it).get ()->size ();
         this->db.append (kval.str ().c_str (), kval.str ().size (), (const char *) &size, sizeof (size_t));

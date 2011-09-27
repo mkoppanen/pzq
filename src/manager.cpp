@@ -42,7 +42,7 @@ bool pzq::manager_t::send_ack (boost::shared_ptr<zmq::message_t> peer_id, boost:
 
 void pzq::manager_t::handle_receiver_in ()
 {
-    pzq_mp_message parts;
+    pzq::message_t parts;
 
     if (m_in.get ()->recv_many (parts) > 0)
     {
@@ -64,7 +64,7 @@ void pzq::manager_t::handle_receiver_in ()
 
 void pzq::manager_t::handle_sender_ack ()
 {
-    pzq_mp_message parts;
+    pzq::message_t parts;
 
     if (m_out.get ()->recv_many (parts) > 0)
     {
@@ -94,7 +94,7 @@ void pzq::manager_t::handle_sender_out ()
 
 void pzq::manager_t::handle_monitor_in ()
 {
-    pzq_mp_message message;
+    pzq::message_t message;
     if (m_monitor.get ()->recv_many (message) == 3)
     {
         if (message.back ().get ()->size () == strlen ("MONITOR") &&

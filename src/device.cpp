@@ -40,14 +40,14 @@ void pzq::device_t::device ()
 
         //  Process a request.
         if (items [0].revents & ZMQ_POLLIN) {
-            pzq_mp_message parts;
+            pzq::message_t parts;
             m_in.get ()->recv_many (parts);
             m_out.get ()->send_many (parts);
         }
 
         //  Process a reply.
         if (items [1].revents & ZMQ_POLLIN) {
-            pzq_mp_message parts;
+            pzq::message_t parts;
             m_out.get ()->recv_many (parts);
             m_in.get ()->send_many (parts);
         }

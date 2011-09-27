@@ -48,7 +48,7 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
     if (!can_write ())
     	throw std::runtime_error ("The socket is in blocking state");
 
-    pzq_mp_message parts;
+    pzq::message_t parts;
 
     boost::shared_ptr<zmq::message_t> header (new zmq::message_t (ksiz));
     memcpy (header.get ()->data (), kbuf, ksiz);

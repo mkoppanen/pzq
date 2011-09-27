@@ -26,9 +26,9 @@ namespace pzq
         socket_t (zmq::context_t& ctx, int io_threads) : zmq::socket_t (ctx, io_threads)
         {}
 
-        bool send_many (pzq_mp_message &parts, int flags)
+        bool send_many (pzq::message_t &parts, int flags)
         {
-            pzq_mp_message_it it;
+            pzq::message_iterator_t it;
             size_t i, elements = parts.size ();
 
             for (i = 0, it = parts.begin (); it != parts.end (); it++, i++)
@@ -45,12 +45,12 @@ namespace pzq
             return true;
         }
 
-        bool send_many (pzq_mp_message &parts)
+        bool send_many (pzq::message_t &parts)
         {
             return send_many (parts, 0);
         }
 
-        int recv_many (pzq_mp_message &parts, int flags)
+        int recv_many (pzq::message_t &parts, int flags)
         {
             int64_t more;
             size_t moresz = sizeof (int64_t);
@@ -69,7 +69,7 @@ namespace pzq
             return i;
         }
 
-        int recv_many (pzq_mp_message &parts)
+        int recv_many (pzq::message_t &parts)
         {
             return recv_many (parts, 0);
         }

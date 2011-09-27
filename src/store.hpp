@@ -42,7 +42,7 @@ namespace pzq {
 
         void open (const std::string &path, int64_t inflight_size);
 
-        bool save (pzq_mp_message &message_parts);
+        bool save (pzq::message_t &message_parts);
 
 		void remove (const std::string &key);
 

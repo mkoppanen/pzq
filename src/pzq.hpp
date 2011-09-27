@@ -29,9 +29,9 @@
 
 namespace pzq 
 {
-    typedef std::list <boost::shared_ptr <zmq::message_t> > pzq_mp_message;
+    typedef std::list <boost::shared_ptr <zmq::message_t> > message_t;
 
-    typedef std::list <boost::shared_ptr <zmq::message_t> >::iterator pzq_mp_message_it;
+    typedef std::list <boost::shared_ptr <zmq::message_t> >::iterator message_iterator_t;
 }
 
 #endif
