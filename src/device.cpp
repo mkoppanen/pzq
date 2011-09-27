@@ -19,11 +19,6 @@
 
 void pzq::device_t::device ()
 {
-    zmq::message_t msg;
-
-    int64_t more;
-    size_t moresz;
-
     zmq_pollitem_t items [2];
     items [0].socket = *m_in;
     items [0].fd = 0;
@@ -35,26 +30,8 @@ void pzq::device_t::device ()
     items [1].events = ZMQ_POLLIN;
     items [1].revents = 0;
 
-    zmq::socket_t *insocket_ = m_in.get ();
-    zmq::socket_t *outsocket_ = m_out.get ();
-
-    // Buffering
-    pzq_mp_message in_buffer, out_buffer;
-
     int rc;
-    while (is_running ()) {
-
-        items [0].events = ZMQ_POLLIN;
-        items [1].events = ZMQ_POLLIN;
-
-        if (in_buffer.size () > 0) {
-            items [0].events = ZMQ_POLLOUT;
-        }
-
-        if (out_buffer.size () > 0) {
-            items [1].events = ZMQ_POLLOUT;
-        }
-
+    while (true) {
         //  Wait while there are either requests or replies to process.
         rc = zmq_poll (&items [0], 2, -1);
         if (rc < 0) {
@@ -63,22 +40,16 @@ void pzq::device_t::device ()
 
         //  Process a request.
         if (items [0].revents & ZMQ_POLLIN) {
-            m_in.get ()->recv_many (out_buffer);
-        }
-
-        if (items [0].revents & ZMQ_POLLOUT) {
-            m_in.get ()->send_many (in_buffer);
-            in_buffer.clear ();
+            pzq_mp_message parts;
+            m_in.get ()->recv_many (parts);
+            m_out.get ()->send_many (parts);
         }
 
         //  Process a reply.
         if (items [1].revents & ZMQ_POLLIN) {
-            m_out.get ()->recv_many (in_buffer);
-        }
-
-        if (items [1].revents & ZMQ_POLLOUT) {
-            m_out.get ()->send_many (out_buffer);
-            out_buffer.clear ();
+            pzq_mp_message parts;
+            m_out.get ()->recv_many (parts);
+            m_in.get ()->send_many (parts);
         }
     }
 }

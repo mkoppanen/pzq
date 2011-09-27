@@ -118,93 +118,87 @@ int main (int argc, char *argv [])
 
     // Init new zeromq context
     zmq::context_t *context = new zmq::context_t (1);
-    pzq::device_t *receiver = new pzq::device_t;
-    pzq::device_t *sender   = new pzq::device_t;
+    
+    {
+        pzq::device_t receiver, sender;
 
-    int linger = 1000;
-    uint64_t hwm = 1;
+        int linger = 1000;
+        uint64_t hwm = 1;
 
-    try {
-        // Wire the receiver
-        boost::shared_ptr<pzq::socket_t> receiver_in (new pzq::socket_t (*context, ZMQ_ROUTER));
-        receiver_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        receiver_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-        receiver_in.get ()->bind (receiver_dsn.c_str ());
+        try {
+            // Wire the receiver
+            boost::shared_ptr<pzq::socket_t> receiver_in (new pzq::socket_t (*context, ZMQ_ROUTER));
+            receiver_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+            receiver_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+            receiver_in.get ()->bind (receiver_dsn.c_str ());
 
-        boost::shared_ptr<pzq::socket_t> receiver_out (new pzq::socket_t (*context, ZMQ_PAIR));
-        receiver_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        receiver_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-        receiver_out.get ()->bind ("inproc://receiver-inproc");
+            boost::shared_ptr<pzq::socket_t> receiver_out (new pzq::socket_t (*context, ZMQ_PAIR));
+            receiver_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+            receiver_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+            receiver_out.get ()->bind ("inproc://receiver-inproc");
 
-        // Wire the sender
-        boost::shared_ptr<pzq::socket_t> sender_in (new pzq::socket_t (*context, ZMQ_PAIR));
-        sender_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        sender_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-        sender_in.get ()->bind ("inproc://sender-inproc");
+            // Wire the sender
+            boost::shared_ptr<pzq::socket_t> sender_in (new pzq::socket_t (*context, ZMQ_PAIR));
+            sender_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+            sender_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+            sender_in.get ()->bind ("inproc://sender-inproc");
 
-        boost::shared_ptr<pzq::socket_t> sender_out (new pzq::socket_t (*context, ZMQ_DEALER));
-        sender_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        sender_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-        sender_out.get ()->bind (sender_dsn.c_str ());
+            boost::shared_ptr<pzq::socket_t> sender_out (new pzq::socket_t (*context, ZMQ_DEALER));
+            sender_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+            sender_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+            sender_out.get ()->bind (sender_dsn.c_str ());
 
-        // Start the receiver device
-        receiver->set_sockets (receiver_in, receiver_out);
-        receiver->start ();
+            // Start the receiver device
+            receiver.set_sockets (receiver_in, receiver_out);
+            receiver.start ();
 
-        // Start the sender device
-        sender->set_sockets (sender_in, sender_out);
-        sender->start ();
-    } catch (std::exception &e) {
-        std::cerr << "Error starting listening sockets: " << e.what () << std::endl;
-        return 1;
+            // Start the sender device
+            sender.set_sockets (sender_in, sender_out);
+            sender.start ();
+        } catch (std::exception &e) {
+            std::cerr << "Error starting listening sockets: " << e.what () << std::endl;
+            return 1;
+        }
+
+        try {
+            // Start the store manager
+            pzq::manager_t manager;
+
+            boost::shared_ptr<pzq::socket_t> manager_in (new pzq::socket_t (*context, ZMQ_PAIR));
+            manager_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+            manager_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+            manager_in.get ()->connect ("inproc://receiver-inproc");
+
+            boost::shared_ptr<pzq::socket_t> manager_out (new pzq::socket_t (*context, ZMQ_PAIR));
+            manager_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+            manager_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+            manager_out.get ()->connect ("inproc://sender-inproc");
+
+            boost::shared_ptr<pzq::socket_t> monitor (new pzq::socket_t (*context, ZMQ_ROUTER));
+            monitor.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+            monitor.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
+            monitor.get ()->bind (monitor_dsn.c_str ());
+
+            boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
+            store.get ()->set_sync_divisor (sync_divisor);
+            store.get ()->open (filename, inflight_size);
+
+            // Reaper for expired messages
+            pzq::expiry_visitor_t reaper (store);
+            reaper.set_frequency (reaper_frequency);
+            reaper.set_ack_timeout (ack_timeout);
+            reaper.start ();
+
+            manager.set_datastore (store);
+            manager.set_ack_timeout (ack_timeout);
+            manager.set_sockets (manager_in, manager_out, monitor);
+
+            manager.run ();
+            store.reset ();
+        } catch (std::exception &e) {
+            std::cerr << "Error starting store manager: " << e.what () << std::endl;
+            return 1;
+        }
     }
-
-    try {
-        // Start the store manager
-        pzq::manager_t manager;
-
-        boost::shared_ptr<pzq::socket_t> manager_in (new pzq::socket_t (*context, ZMQ_PAIR));
-        manager_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        manager_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-        manager_in.get ()->connect ("inproc://receiver-inproc");
-
-        boost::shared_ptr<pzq::socket_t> manager_out (new pzq::socket_t (*context, ZMQ_PAIR));
-        manager_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        manager_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-        manager_out.get ()->connect ("inproc://sender-inproc");
-
-        boost::shared_ptr<pzq::socket_t> monitor (new pzq::socket_t (*context, ZMQ_ROUTER));
-        monitor.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        monitor.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-        monitor.get ()->bind (monitor_dsn.c_str ());
-
-        boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
-        store.get ()->set_sync_divisor (sync_divisor);
-        store.get ()->open (filename, inflight_size);
-
-        // Reaper for expired messages
-        pzq::expiry_visitor_t reaper (store);
-        reaper.set_frequency (reaper_frequency);
-        reaper.set_ack_timeout (ack_timeout);
-        reaper.start ();
-
-        manager.set_datastore (store);
-        manager.set_ack_timeout (ack_timeout);
-        manager.set_sockets (manager_in, manager_out, monitor);
-
-        manager.run ();
-    } catch (std::exception &e) {
-        std::cerr << "Error starting store manager: " << e.what () << std::endl;
-        return 1;
-    }
-    receiver->stop ();
-    sender->stop ();
-
-    // move the context termination to detached thread
-    pzq::terminator_t terminator (context);
-    terminator.start ();
-
-    delete receiver;
-    delete sender;
-    return 0;
+    exit (0);
 }

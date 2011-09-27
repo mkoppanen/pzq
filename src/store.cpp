@@ -148,7 +148,7 @@ bool pzq::datastore_t::messages_pending ()
 
 pzq::datastore_t::~datastore_t ()
 {
-    std::cerr << "Closing down datastore" << std::endl;
     db.close ();
     inflight_db.close ();
+    std::cerr << "Closing down datastore" << std::endl;
 }
