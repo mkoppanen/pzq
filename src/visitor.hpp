@@ -21,6 +21,7 @@
 #include "store.hpp"
 #include "socket.hpp"
 #include "time.hpp"
+#include "thread.hpp"
 
 using namespace kyotocabinet;
 
@@ -56,27 +57,17 @@ namespace pzq
 
     };
 
-    class expiry_visitor_t : public DB::Visitor
+    class expiry_visitor_t : public DB::Visitor, public thread_t
     {
     private:
         uint64_t m_time;
         uint64_t m_timeout;
         uint64_t m_frequency;
-        boost::shared_ptr<boost::thread> m_thread;
         boost::shared_ptr<pzq::datastore_t> m_store;
 
     public:
         expiry_visitor_t (boost::shared_ptr<pzq::datastore_t> store) : m_store (store)
         {}
-
-        void start ()
-        {
-            m_thread = boost::shared_ptr<boost::thread> (
-                            new boost::thread (
-                                boost::bind (&expiry_visitor_t::run, this)
-                            )
-                       );
-        }
 
         void set_frequency (uint64_t frequency)
         {
@@ -88,15 +79,7 @@ namespace pzq
             m_timeout = timeout;
         }
 
-        void run ()
-        {
-            while (1)
-            {
-                m_time = microsecond_timestamp ();
-                m_store.get ()->iterate_inflight (this);
-                boost::this_thread::sleep (boost::posix_time::microseconds (m_frequency));
-            }
-        }
+        void run ();
 
         const char *visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp);
     };

@@ -14,32 +14,9 @@
  *  limitations under the License.                 
  */
 
-#ifndef PZQ_DEVICE_HPP
-# define PZQ_DEVICE_HPP
+#include "terminator.hpp"
 
-#include "pzq.hpp"
-#include "thread.hpp"
-#include "socket.hpp"
-
-namespace pzq {
-
-    class device_t : public thread_t
-    {
-    private:
-        boost::shared_ptr<pzq::socket_t> m_in;
-        boost::shared_ptr<pzq::socket_t> m_out;
-
-    public:
-        void set_sockets (boost::shared_ptr<pzq::socket_t> in, boost::shared_ptr<pzq::socket_t> out)
-        {
-            m_in = in;
-            m_out = out;
-        }
-
-        void run ();
-
-        void device ();
-    };
+void pzq::terminator_t::run ()
+{
+    delete m_ctx;
 }
-
-#endif
