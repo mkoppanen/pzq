@@ -19,29 +19,29 @@
 
 int main (int argc, char *argv [])
 {
-	zmq::context_t context (1);
+    zmq::context_t context (1);
 
-	pzq::socket_t socket (context, ZMQ_DEALER);
+    pzq::socket_t socket (context, ZMQ_DEALER);
     socket.connect ("tcp://127.0.0.1:11131");
 
-	for (int i = 0; i < 10000; i++)
-	{
-		pzq::message_t parts;
-		boost::shared_ptr<zmq::message_t> id (new zmq::message_t (sizeof (int)));
-		memcpy (id.get ()->data (), &i, sizeof (int));
-		parts.push_back (id);
+    for (int i = 0; i < 10000; i++)
+    {
+        pzq::message_t parts;
+        boost::shared_ptr<zmq::message_t> id (new zmq::message_t (sizeof (int)));
+        memcpy (id.get ()->data (), &i, sizeof (int));
+        parts.push_back (id);
 
-		boost::shared_ptr<zmq::message_t> delimiter (new zmq::message_t);
-		parts.push_back (delimiter);
+        boost::shared_ptr<zmq::message_t> delimiter (new zmq::message_t);
+        parts.push_back (delimiter);
 
-		boost::shared_ptr<zmq::message_t> datas (new zmq::message_t (sizeof (int)));
-		memcpy (datas.get ()->data (), &i, sizeof (int));
-		parts.push_back (datas);
+        boost::shared_ptr<zmq::message_t> datas (new zmq::message_t (sizeof (int)));
+        memcpy (datas.get ()->data (), &i, sizeof (int));
+        parts.push_back (datas);
 
-		socket.send_many (parts);
+        socket.send_many (parts);
 
-		pzq::message_t reply;
-		socket.recv_many (reply);
-	}
-	return 0;
+        pzq::message_t reply;
+        socket.recv_many (reply);
+    }
+    return 0;
 }
