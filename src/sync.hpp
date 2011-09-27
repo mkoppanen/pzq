@@ -14,29 +14,37 @@
  *  limitations under the License.                 
  */
 
-#ifndef PZQ_TERMINATOR_HPP
-# define PZQ_TERMINATOR_HPP
+#ifndef PZQ_SYNC_HPP
+# define PZQ_SYNC_HPP
 
-#include "pzq.hpp"
-#include "thread.hpp"
+namespace pzq {
 
-namespace pzq
-{
-    class terminator_t : public thread_t
-    {
+    class sync_t : public thread_t {
+
     private:
-        zmq::context_t *m_ctx;
+        uint64_t m_frequency;
+        boost::shared_ptr<pzq::datastore_t> m_store;
 
     public:
-        terminator_t (zmq::context_t *ctx) : m_ctx (ctx)
+        sync_t (boost::shared_ptr<pzq::datastore_t> store) : m_store (store), m_frequency (500000)
         {
         }
 
         void run ()
         {
-            delete m_ctx;
+            while (is_running ())
+            {
+                m_store.get ()->sync ();
+                boost::this_thread::sleep (boost::posix_time::microseconds (m_frequency));
+            }
+        }
+
+        void set_frequency (uint64_t frequency)
+        {
+            m_frequency = frequency;
         }
     };
 }
+
 
 #endif

@@ -16,8 +16,6 @@
 #include "visitor.hpp"
 #include "time.hpp"
 
-extern sig_atomic_t keep_running;
-
 bool pzq::visitor_t::can_write ()
 {
     int events = 0;
@@ -90,12 +88,7 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
 
 void pzq::expiry_visitor_t::run ()
 {
-    sigset_t new_mask;
-    sigfillset(&new_mask);
-    sigset_t old_mask;
-    pthread_sigmask(SIG_BLOCK, &new_mask, &old_mask);
-
-    while (keep_running)
+    while (is_running ())
     {
         m_time = microsecond_timestamp ();
         m_store.get ()->iterate_inflight (this);

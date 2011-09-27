@@ -65,23 +65,19 @@ bool pzq::datastore_t::save (pzq::message_t &parts)
                          (const char *) (*it).get ()->data (), (*it).get ()->size ());
     }
     this->db.end_transaction ();
-	sync ();
 
     return true;
 }
 
 void pzq::datastore_t::sync ()
 {
-	if (m_divisor == 0 || (rand () % m_divisor) == 0)
-	{
-        if (!this->db.synchronize (m_hard_sync))
-            throw pzq::datastore_exception (this->db);
+    if (!this->db.synchronize (m_hard_sync))
+        throw pzq::datastore_exception (this->db);
 
-		if (!this->inflight_db.synchronize (m_hard_sync))
-            throw pzq::datastore_exception (this->inflight_db);
+	if (!this->inflight_db.synchronize (m_hard_sync))
+        throw pzq::datastore_exception (this->inflight_db);
 
-        m_syncs++;
-	}
+    m_syncs++;
 }
 
 void pzq::datastore_t::remove (const std::string &key)
@@ -91,8 +87,6 @@ void pzq::datastore_t::remove (const std::string &key)
 
 	if (!this->db.remove (key))
 	    throw pzq::datastore_exception (this->db);
-
-	sync ();
 }
 
 void pzq::datastore_t::close ()
@@ -125,8 +119,6 @@ void pzq::datastore_t::iterate (DB::Visitor *visitor)
 {
     if (!this->db.iterate (visitor, false))
         throw pzq::datastore_exception (this->db);
-
-	sync ();
 }
 
 void pzq::datastore_t::iterate_inflight (DB::Visitor *visitor)

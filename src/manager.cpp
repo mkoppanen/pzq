@@ -145,7 +145,8 @@ void pzq::manager_t::run ()
     // Set time out on store
     m_store.get ()->set_ack_timeout (m_ack_timeout);
 
-    while (keep_running) {
+    while (is_running ())
+    {
         bool messages_pending = m_store.get ()->messages_pending ();
 
         if (messages_pending)

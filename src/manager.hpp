@@ -26,7 +26,7 @@ using namespace kyotocabinet;
 
 namespace pzq {
 
-    class manager_t
+    class manager_t : public thread_t
     {
     private:
         boost::shared_ptr<pzq::socket_t> m_in;
@@ -65,11 +65,6 @@ namespace pzq {
 			m_store = store;
 			m_visitor.set_datastore (store);
 		}
-
-        void start ()
-        {
-            run ();
-        }
 
         void run ();
     };
