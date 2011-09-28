@@ -55,16 +55,30 @@ bool pzq::datastore_t::save (pzq::message_t &parts)
     kval << pzq::microsecond_timestamp ();
     kval << "|" << uuid_str;
 
-    this->db.begin_transaction ();
+    bool success = true;
+
+    this->db.begin_transaction (m_hard_sync);
 
     for (pzq::message_iterator_t it = parts.begin (); it != parts.end (); it++)
     {
         size_t size = (*it).get ()->size ();
-        this->db.append (kval.str ().c_str (), kval.str ().size (), (const char *) &size, sizeof (size_t));
-        this->db.append (kval.str ().c_str (), kval.str ().size (),
-                         (const char *) (*it).get ()->data (), (*it).get ()->size ());
+        success = this->db.append (kval.str ().c_str (), kval.str ().size (), (const char *) &size, sizeof (size_t));
+
+        if (!success)
+            break;
+
+        success = this->db.append (kval.str ().c_str (), kval.str ().size (),
+                                  (const char *) (*it).get ()->data (), (*it).get ()->size ());
+
+        if (!success)
+            break;
     }
-    this->db.end_transaction ();
+    // Succeeded 
+    if (!this->db.end_transaction (success))
+        throw pzq::datastore_exception (this->db);
+
+    if (!success)
+        throw pzq::datastore_exception ("Failed to store the record");
 
     return true;
 }
@@ -87,6 +101,8 @@ void pzq::datastore_t::remove (const std::string &key)
 
 	if (!this->db.remove (key))
 	    throw pzq::datastore_exception (this->db);
+
+    sync ();
 }
 
 void pzq::datastore_t::close ()

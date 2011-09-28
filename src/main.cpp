@@ -19,8 +19,6 @@
 #include "manager.hpp"
 #include "socket.hpp"
 #include "visitor.hpp"
-#include "terminator.hpp"
-#include "sync.hpp"
 
 #include <boost/program_options.hpp>
 #include <signal.h>
@@ -64,18 +62,6 @@ int main (int argc, char *argv [])
         ("reaper-frequency",
           po::value<uint64_t> (&reaper_frequency)->default_value (2500000),
          "How often to clean up expired messages (microseconds)")
-    ;
-
-    desc.add_options()
-        ("sync-frequency",
-          po::value<uint64_t> (&sync_frequency)->default_value (2500000),
-         "How often to sync messages to disk (microseconds)")
-    ;
-
-    desc.add_options()
-        ("sync-divisor",
-          po::value<int> (&sync_divisor)->default_value (0),
-         "The divisor for sync to the disk. 0 causes sync after every message")
     ;
 
     desc.add_options()
@@ -198,31 +184,26 @@ int main (int argc, char *argv [])
                 reaper.set_ack_timeout (ack_timeout);
                 reaper.start ();
 
-                // Syncing to disk
-                pzq::sync_t sync (store);
-                sync.set_frequency (sync_frequency);
-                sync.start ();
-
                 manager.set_datastore (store);
                 manager.set_ack_timeout (ack_timeout);
                 manager.set_sockets (manager_in, manager_out, monitor);
-
                 manager.start ();
 
                 while (keep_running)
                 {
-                    boost::this_thread::sleep (boost::posix_time::seconds (1));
+                    boost::this_thread::sleep (
+                        boost::posix_time::seconds (1)
+                    );
                 }
                 manager.stop ();
                 sender.stop ();
                 receiver.stop ();
                 reaper.stop ();
-                sync.stop ();
+
             } catch (std::exception &e) {
                 std::cerr << "Error starting store manager: " << e.what () << std::endl;
                 return 1;
             }
-            store.reset ();
         }
     }
     return 0;
