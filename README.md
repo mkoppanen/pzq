@@ -14,22 +14,23 @@ Building
 Options
 =======
 
-        Command-line options:
-          --help                             produce help message
-          --database arg (=/tmp/sink.kch)    Database sink file location
-          --ack-timeout arg (=5000000)       How long to wait for ACK before resending 
-                                             message (microseconds)
-          --sync-divisor arg (=0)            The divisor for sync to the disk. 0 causes
-                                             sync after every message
-          --hard-sync                        If enabled the data is flushed to disk on 
-                                             every sync
-          --inflight-size arg (=31457280)    Maximum size in bytes for the in-flight 
-                                             messages database. Full database causes 
-                                             LRU collection
-          --receive-dsn arg (=tcp://*:11131) The DSN for the receive socket
-          --send-dsn arg (=tcp://*:11132)    The DSN for the backend client 
-                                             communication socket
-          --monitor-dsn arg (=tcp://*:11132) The DSN for the monitoring socket
+    Command-line options:
+      --help                                produce help message
+      --database arg (=/tmp/sink.kch)       Database sink file location
+      --ack-timeout arg (=5000000)          How long to wait for ACK before 
+                                            resending message (microseconds)
+      --reaper-frequency arg (=2500000)     How often to clean up expired messages 
+                                            (microseconds)
+      --hard-sync                           If enabled the data is flushed to disk 
+                                            on every sync
+      --inflight-size arg (=31457280)       Maximum size in bytes for the in-flight
+                                            messages database. Full database causes
+                                            LRU collection
+      --receive-dsn arg (=tcp://*:11131)    The DSN for the receive socket
+      --send-dsn arg (=tcp://*:11132)       The DSN for the backend client 
+                                            communication socket
+      --monitor-dsn arg (=ipc:///tmp/pzq-monitor)
+                                            The DSN for the monitoring socket
 
 
 Consistency
