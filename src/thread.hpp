@@ -43,6 +43,20 @@ namespace pzq {
             m_mutex.lock ();
             m_running = false;
             m_mutex.unlock ();
+
+            m_thread->interrupt ();
+
+            // Try to join the thread
+            if (!m_thread->timed_join (boost::posix_time::seconds (2))) {
+                pthread_t handle = m_thread->native_handle ();
+
+                // Try to send SIGINT to the thread
+                pthread_kill (handle, SIGINT);
+
+                if (!m_thread->timed_join (boost::posix_time::seconds (2))) {
+                    pthread_cancel (handle);
+                }
+            }
         }
 
         void start ()
@@ -69,19 +83,8 @@ namespace pzq {
 
         virtual ~thread_t ()
         {
-            stop ();
-            m_thread->interrupt ();
-
-            // Try to join the thread
-            if (!m_thread->timed_join (boost::posix_time::seconds (2))) {
-                pthread_t handle = m_thread->native_handle ();
-
-                // Try to send SIGINT to the thread
-                pthread_kill (handle, SIGINT);
-
-                if (!m_thread->timed_join (boost::posix_time::seconds (2))) {
-                    pthread_cancel (handle);
-                }
+            if (m_running) {
+                stop ();
             }
             delete m_thread;
         }
