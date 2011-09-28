@@ -168,6 +168,10 @@ int main (int argc, char *argv [])
             return 1;
         }
 
+        boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
+        store.get ()->set_sync_divisor (sync_divisor);
+        store.get ()->open (filename, inflight_size);
+
         try {
             // Start the store manager
             pzq::manager_t manager;
@@ -186,10 +190,6 @@ int main (int argc, char *argv [])
             monitor.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
             monitor.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
             monitor.get ()->bind (monitor_dsn.c_str ());
-
-            boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
-            store.get ()->set_sync_divisor (sync_divisor);
-            store.get ()->open (filename, inflight_size);
 
             // Reaper for expired messages
             pzq::expiry_visitor_t reaper (store);
@@ -212,17 +212,17 @@ int main (int argc, char *argv [])
             {
                 boost::this_thread::sleep (boost::posix_time::seconds (1));
             }
-            reaper.stop ();
-            sync.stop ();
+            manager.stop ();
             sender.stop ();
             receiver.stop ();
-
-            store.reset ();
-
+            reaper.stop ();
+            sync.stop ();
         } catch (std::exception &e) {
             std::cerr << "Error starting store manager: " << e.what () << std::endl;
             return 1;
         }
+        store.reset ();
     }
-    exit (0);
+    delete context;
+    return 0;
 }
