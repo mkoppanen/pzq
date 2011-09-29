@@ -61,8 +61,9 @@ bool pzq::datastore_t::save (pzq::message_t &parts)
 
     for (pzq::message_iterator_t it = parts.begin (); it != parts.end (); it++)
     {
-        size_t size = (*it).get ()->size ();
-        success = this->db.append (kval.str ().c_str (), kval.str ().size (), (const char *) &size, sizeof (size_t));
+        uint64_t size = (*it).get ()->size ();
+        success = this->db.append (kval.str ().c_str (), kval.str ().size (),
+                                  (const char *) &size, sizeof (uint64_t));
 
         if (!success)
             break;
@@ -73,7 +74,6 @@ bool pzq::datastore_t::save (pzq::message_t &parts)
         if (!success)
             break;
     }
-    // Succeeded 
     if (!this->db.end_transaction (success))
         throw pzq::datastore_exception (this->db);
 
@@ -105,11 +105,6 @@ void pzq::datastore_t::remove (const std::string &key)
     sync ();
 }
 
-void pzq::datastore_t::close ()
-{
-    this->db.close ();
-}
-
 bool pzq::datastore_t::is_in_flight (const std::string &k)
 {
 	uint64_t value;
@@ -119,6 +114,7 @@ bool pzq::datastore_t::is_in_flight (const std::string &k)
 	if (pzq::microsecond_timestamp () - value > m_ack_timeout)
 	{
 		this->inflight_db.remove (k.c_str (), k.size ());
+		this->inflight_db.synchronize ();
         message_expired ();
 		return false;
 	}
@@ -129,6 +125,7 @@ void pzq::datastore_t::mark_in_flight (const std::string &k)
 {
 	uint64_t value = pzq::microsecond_timestamp ();
     this->inflight_db.add (k.c_str (), k.size (), (const char *) &value, sizeof (uint64_t));
+    this->inflight_db.synchronize ();
 }
 
 void pzq::datastore_t::iterate (DB::Visitor *visitor)
@@ -141,6 +138,8 @@ void pzq::datastore_t::iterate_inflight (DB::Visitor *visitor)
 {
     if (!this->inflight_db.iterate (visitor, true))
         throw pzq::datastore_exception (this->db);
+
+    this->inflight_db.synchronize ();
 }
 
 bool pzq::datastore_t::messages_pending ()
@@ -149,9 +148,10 @@ bool pzq::datastore_t::messages_pending ()
         return false;
     }
 
-    this->inflight_db.occupy ();
-    if (this->inflight_db.count () != this->db.count ())
-        return true;
+    if (this->inflight_db.count () == this->db.count ())
+        return false;
+
+    return true;
 }
 
 pzq::datastore_t::~datastore_t ()

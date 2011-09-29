@@ -31,10 +31,9 @@ bool pzq::visitor_t::can_write ()
 
 const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp) 
 {
-    size_t pos = 0;
-    int32_t flags;
+    uint64_t pos = 0;
     size_t msg_size;
-    bool more = true;
+
 
 	std::string key (kbuf, ksiz);
 
@@ -69,8 +68,8 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
 
     while (true)
     {
-        memcpy (&msg_size, vbuf + pos, sizeof (size_t));
-        pos += sizeof (size_t);
+        memcpy (&msg_size, vbuf + pos, sizeof (uint64_t));
+        pos += sizeof (uint64_t);
 
         boost::shared_ptr<zmq::message_t> part (new zmq::message_t (msg_size));
         memcpy (part.get ()->data (), vbuf + pos, msg_size);
@@ -90,6 +89,9 @@ void pzq::expiry_visitor_t::run ()
 {
     while (is_running ())
     {
+#ifdef DEBUG
+        std::cerr << "Running expiry reaper" << std::endl;
+#endif
         m_time = microsecond_timestamp ();
         m_store.get ()->iterate_inflight (this);
         boost::this_thread::sleep (boost::posix_time::microseconds (m_frequency));

@@ -39,8 +39,7 @@ int main (int argc, char *argv [])
     std::string filename;
     int sync_divisor;
     int64_t inflight_size;
-    uint64_t ack_timeout, reaper_frequency, sync_frequency;
-    bool hard_sync;
+    uint64_t ack_timeout, reaper_frequency;
     std::string receiver_dsn, sender_dsn, monitor_dsn, peer_uuid;
 
     desc.add_options ()
@@ -117,7 +116,7 @@ int main (int argc, char *argv [])
         pzq::device_t receiver, sender;
 
         {
-            int linger = 1000;
+            int linger = 1000000000;
             uint64_t hwm = 1;
 
             // Wire the receiver
