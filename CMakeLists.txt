@@ -4,6 +4,7 @@ PROJECT(pzq)
 SET(MODULE_NAME pzq)
 
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
+set(CMAKE_CXX_FLAGS "-g -Wall")
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	IF(EXISTS "/opt/local/var/macports/")
@@ -42,3 +43,8 @@ ADD_EXECUTABLE(producer tests/producer.cpp)
 TARGET_LINK_LIBRARIES(producer ${Boost_LIBRARIES})
 TARGET_LINK_LIBRARIES(producer ${ZeroMQ_LIBRARIES})
 TARGET_LINK_LIBRARIES(producer ${kyotocabinet_LIBRARIES})
+
+ADD_EXECUTABLE(consumer tests/consumer.cpp)
+TARGET_LINK_LIBRARIES(consumer ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(consumer ${ZeroMQ_LIBRARIES})
+TARGET_LINK_LIBRARIES(consumer ${kyotocabinet_LIBRARIES})
