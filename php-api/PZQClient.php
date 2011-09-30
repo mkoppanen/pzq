@@ -88,7 +88,7 @@ class PZQProducer
     
     public function __construct ($dsn = null)
     {
-        $this->socket = new ZMQSocket (new ZMQContext (), ZMQ::SOCKET_XREQ);
+        $this->socket = new ZMQSocket (new ZMQContext (), ZMQ::SOCKET_DEALER);
         
         if ($dsn)
         {
@@ -123,15 +123,15 @@ class PZQProducer
             throw new PZQClientException ('ACK timeout');
         
         $response = $this->socket->recvMulti ();
-        
-        if ($response [1] != $message->get_id ()) 
+
+        if ($response [0] != $message->get_id ()) 
             throw new PZQClientException ('Got ACK for wrong message');
 
-        if ($response [2] != 'OK')
+        if ($response [1] != 'OK')
             throw new PZQClientException (
                         'Remote peer failed to handle message'
                       );
-                      
+  
         return true;
     }
 }
@@ -147,7 +147,7 @@ class PZQConsumer
     public function __construct ($dsn = null)
     {
         $ctx = new ZMQContext ();
-        $this->socket = new ZMQSocket ($ctx, ZMQ::SOCKET_XREP);
+        $this->socket = new ZMQSocket ($ctx, ZMQ::SOCKET_ROUTER);
         
         if ($dsn)
             $this->connect ($dsn);
