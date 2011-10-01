@@ -28,12 +28,18 @@ namespace pzq {
     private:
         boost::shared_ptr<pzq::socket_t> m_in;
         boost::shared_ptr<pzq::socket_t> m_out;
+        std::string m_name;
 
     public:
         void set_sockets (boost::shared_ptr<pzq::socket_t> in, boost::shared_ptr<pzq::socket_t> out)
         {
             m_in = in;
             m_out = out;
+        }
+
+        void set_name (std::string name)
+        {
+            m_name = name;
         }
 
         void run ();

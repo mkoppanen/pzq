@@ -143,10 +143,12 @@ int main (int argc, char *argv [])
 
             try {
                 // Start the receiver device
+                receiver.set_name (std::string("producer side"));
                 receiver.set_sockets (receiver_in, receiver_out);
                 receiver.start ();
 
                 // Start the sender device
+                sender.set_name (std::string("consumer side"));
                 sender.set_sockets (sender_in, sender_out);
                 sender.start ();
             } catch (std::exception &e) {

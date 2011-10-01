@@ -31,6 +31,8 @@ void pzq::device_t::device ()
     items [1].revents = 0;
 
     int rc;
+    int in = 0, out = 0;
+
     while (true) {
         //  Wait while there are either requests or replies to process.
         rc = zmq_poll (&items [0], 2, -1);
@@ -39,17 +41,25 @@ void pzq::device_t::device ()
         }
 
         //  Process a request.
-        if (items [0].revents & ZMQ_POLLIN) {
+        if (items [0].revents & ZMQ_POLLIN) {     
             pzq::message_t parts;
             if (m_in.get ()->recv_many (parts) > 0)
+            {
                 m_out.get ()->send_many (parts);
+                std::cerr << "Message from " << m_name << " in to out: " << in << std::endl;
+                in++;
+            }
         }
 
         //  Process a reply.
         if (items [1].revents & ZMQ_POLLIN) {
             pzq::message_t parts;
             if (m_out.get ()->recv_many (parts) > 0)
+            {
                 m_in.get ()->send_many (parts);
+                std::cerr << "Message from " << m_name << " out to in: " << out << std::endl;
+                out++;
+            }
         }
     }
 }
