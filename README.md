@@ -40,12 +40,6 @@ Consistency
 Defines how long to wait for an ACK for message delivered before scheduling
 it for retransmission.
 
---sync-divisor
-Sync divisor is used to determine how often the messages should be flushed
-to disk. On each operation a random number between 0 and sync_divisor is chosen and if the number is 0 then a sync is done. Setting  higher sync
-divisor causes things to run faster but this comes at the cost of possibly 
-losing more messages on crash.
-
 --hard-sync
 Define this option for physical synchronization with the device, or leave out
 for logical synchronization with the file system.

@@ -34,7 +34,6 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
     uint64_t pos = 0;
     size_t msg_size;
 
-
 	std::string key (kbuf, ksiz);
 
 	if (m_store.get ()->is_in_flight (key))

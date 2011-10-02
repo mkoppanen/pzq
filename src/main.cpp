@@ -113,49 +113,9 @@ int main (int argc, char *argv [])
     zmq::context_t context (1);
 
     {
-        pzq::device_t receiver, sender;
-
+        int linger = 1000;
+        uint64_t hwm = 1;
         {
-            int linger = 1000000000;
-            uint64_t hwm = 1;
-
-            // Wire the receiver
-            boost::shared_ptr<pzq::socket_t> receiver_in (new pzq::socket_t (context, ZMQ_ROUTER));
-            receiver_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-            receiver_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-            receiver_in.get ()->bind (receiver_dsn.c_str ());
-
-            boost::shared_ptr<pzq::socket_t> receiver_out (new pzq::socket_t (context, ZMQ_PAIR));
-            receiver_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-            receiver_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-            receiver_out.get ()->bind ("inproc://receiver-inproc");
-
-            // Wire the sender
-            boost::shared_ptr<pzq::socket_t> sender_in (new pzq::socket_t (context, ZMQ_PAIR));
-            sender_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-            sender_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-            sender_in.get ()->bind ("inproc://sender-inproc");
-
-            boost::shared_ptr<pzq::socket_t> sender_out (new pzq::socket_t (context, ZMQ_DEALER));
-            sender_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-            sender_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-            sender_out.get ()->bind (sender_dsn.c_str ());
-
-            try {
-                // Start the receiver device
-                receiver.set_name (std::string("producer side"));
-                receiver.set_sockets (receiver_in, receiver_out);
-                receiver.start ();
-
-                // Start the sender device
-                sender.set_name (std::string("consumer side"));
-                sender.set_sockets (sender_in, sender_out);
-                sender.start ();
-            } catch (std::exception &e) {
-                std::cerr << "Error starting listening sockets: " << e.what () << std::endl;
-                return 1;
-            }
-
             boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
             store.get ()->set_sync_divisor (sync_divisor);
             store.get ()->open (filename, inflight_size);
@@ -163,12 +123,12 @@ int main (int argc, char *argv [])
             boost::shared_ptr<pzq::socket_t> manager_in (new pzq::socket_t (context, ZMQ_PAIR));
             manager_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
             manager_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-            manager_in.get ()->connect ("inproc://receiver-inproc");
+            manager_in.get ()->bind (receiver_dsn.c_str ());
 
             boost::shared_ptr<pzq::socket_t> manager_out (new pzq::socket_t (context, ZMQ_PAIR));
             manager_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
             manager_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-            manager_out.get ()->connect ("inproc://sender-inproc");
+            manager_out.get ()->bind (sender_dsn.c_str ());
 
             boost::shared_ptr<pzq::socket_t> monitor (new pzq::socket_t (context, ZMQ_ROUTER));
             monitor.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
@@ -197,8 +157,6 @@ int main (int argc, char *argv [])
                     );
                 }
                 manager.stop ();
-                sender.stop ();
-                receiver.stop ();
                 reaper.stop ();
 
             } catch (std::exception &e) {

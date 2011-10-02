@@ -140,7 +140,7 @@ void pzq::manager_t::run ()
         if (messages_pending)
             items [1].events = ZMQ_POLLIN | ZMQ_POLLOUT;
         else
-            items [1].events  = ZMQ_POLLIN;
+            items [1].events = ZMQ_POLLIN;
 
         try {
             rc = zmq::poll (&items [0], 3, -1);
@@ -148,6 +148,9 @@ void pzq::manager_t::run ()
             std::cerr << e.what () << ". exiting.." << std::endl;
             break;
         }
+
+        if (rc < 0)
+            throw std::runtime_error ("Poll failed");
 
         if (items [0].revents & ZMQ_POLLIN)
         {
@@ -166,7 +169,6 @@ void pzq::manager_t::run ()
             // Sending messages to right side
             handle_sender_out ();
         }
-
         if (items [2].revents & ZMQ_POLLIN)
         {
             // Monitoring request

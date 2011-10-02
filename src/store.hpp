@@ -68,7 +68,7 @@ namespace pzq {
             return this->inflight_db.size ();
         }
 
-        uint64_t num_syncs ()
+        uint64_t num_syncs () const
         {
             return m_syncs;
         }
