@@ -56,19 +56,53 @@ void pzq::manager_t::handle_sender_ack ()
 
     if (m_out.get ()->recv_many (parts) > 0)
     {
+        static int got_ack = 0;
+        got_ack++;
+        std::cerr << "Got ACK: " << got_ack << std::endl;
+        
+        
+        /*
         std::string key (static_cast <char *>(parts.back ().get ()->data ()), parts.back ().get ()->size ());
         try {
             m_store.get ()->remove (key);
         } catch (std::exception &e) {
             std::cerr << "Not removing record (" << key << "): " << e.what () << std::endl;
-        }
+        }*/
     }
 }
 
 void pzq::manager_t::handle_sender_out ()
 {
     try {
-        m_store.get ()->iterate (&m_visitor);
+        while (true)
+        {
+            std::string key ("hello", 5);
+
+            pzq::message_t parts;
+
+            boost::shared_ptr<zmq::message_t> header (new zmq::message_t (key.size ()));
+            memcpy (header.get ()->data (), key.c_str (), key.size ());
+            parts.push_back (header);
+
+            // Time when the message goes out
+            std::stringstream mt;
+            mt << pzq::microsecond_timestamp ();
+
+            boost::shared_ptr<zmq::message_t> out_time (new zmq::message_t (mt.str ().size ()));
+            memcpy (out_time.get ()->data (), mt.str ().c_str (), mt.str ().size ());
+            parts.push_back (out_time);
+
+            std::stringstream expiry;
+            expiry << m_store.get ()->get_ack_timeout ();
+
+            boost::shared_ptr<zmq::message_t> ack_timeout (new zmq::message_t (expiry.str ().size ()));
+            memcpy (ack_timeout.get ()->data (), expiry.str ().c_str (), expiry.str ().size ());
+            parts.push_back (ack_timeout);
+
+            if (!m_out.get ()->send_many (parts, ZMQ_NOBLOCK))
+                throw std::runtime_error ("Cannot send");
+        }
+        //m_store.get ()->iterate (&m_visitor);
     } catch (std::exception &e) {
 #ifdef DEBUG
         std::cerr << "Datastore iteration stopped: " << e.what () << std::endl;
@@ -122,7 +156,7 @@ void pzq::manager_t::run ()
 
     items [1].socket  = *m_out;
     items [1].fd      = 0;
-    items [1].events  = ZMQ_POLLIN;
+    items [1].events  = ZMQ_POLLIN | ZMQ_POLLOUT;
     items [1].revents = 0;
 
     items [2].socket  = *m_monitor;
@@ -135,15 +169,8 @@ void pzq::manager_t::run ()
 
     while (is_running ())
     {
-        bool messages_pending = m_store.get ()->messages_pending ();
-
-        if (messages_pending)
-            items [1].events = ZMQ_POLLIN | ZMQ_POLLOUT;
-        else
-            items [1].events = ZMQ_POLLIN;
-
         try {
-            rc = zmq::poll (&items [0], 3, -1);
+            rc = zmq::poll (&items [0], 2, -1);
         } catch (std::exception& e) {
             std::cerr << e.what () << ". exiting.." << std::endl;
             break;
@@ -168,11 +195,6 @@ void pzq::manager_t::run ()
         {
             // Sending messages to right side
             handle_sender_out ();
-        }
-        if (items [2].revents & ZMQ_POLLIN)
-        {
-            // Monitoring request
-            handle_monitor_in ();
         }
     }
 }

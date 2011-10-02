@@ -120,12 +120,12 @@ int main (int argc, char *argv [])
             store.get ()->set_sync_divisor (sync_divisor);
             store.get ()->open (filename, inflight_size);
 
-            boost::shared_ptr<pzq::socket_t> manager_in (new pzq::socket_t (context, ZMQ_PAIR));
+            boost::shared_ptr<pzq::socket_t> manager_in (new pzq::socket_t (context, ZMQ_ROUTER));
             manager_in.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
             manager_in.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
             manager_in.get ()->bind (receiver_dsn.c_str ());
 
-            boost::shared_ptr<pzq::socket_t> manager_out (new pzq::socket_t (context, ZMQ_PAIR));
+            boost::shared_ptr<pzq::socket_t> manager_out (new pzq::socket_t (context, ZMQ_DEALER));
             manager_out.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
             manager_out.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
             manager_out.get ()->bind (sender_dsn.c_str ());
