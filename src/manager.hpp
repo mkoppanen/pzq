@@ -35,12 +35,13 @@ namespace pzq {
         boost::shared_ptr<pzq::datastore_t> m_store;
         pzq::visitor_t m_visitor;
         uint64_t m_ack_timeout;
+        boost::mutex m_mutex;
 
-        void handle_receiver_in ();
+        void handle_producer_in ();
 
-        void handle_sender_ack ();
+        void handle_consumer_ack ();
 
-        void handle_sender_out ();
+        void handle_consumer_out ();
 
         void handle_monitor_in ();
 
@@ -49,10 +50,12 @@ namespace pzq {
     public:
         void set_sockets (boost::shared_ptr<pzq::socket_t> in, boost::shared_ptr<pzq::socket_t> out, boost::shared_ptr<pzq::socket_t> monitor)
         {
+            m_mutex.lock ();
             m_in = in;
             m_out = out;
             m_monitor = monitor;
             m_visitor.set_socket (m_out);
+            m_mutex.unlock ();
         }
 
         void set_ack_timeout (uint64_t ack_timeout)

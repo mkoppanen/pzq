@@ -23,13 +23,14 @@ using namespace kyotocabinet;
 
 namespace pzq {
 
-    typedef char pzq_uuid_string_t [37];
+    typedef char uuid_string_t [37];
 
     class datastore_t
     {
     protected:
-        TreeDB db;
-		CacheDB inflight_db;
+        TreeDB m_db;
+		CacheDB m_inflight_db;
+        boost::scoped_ptr<TreeDB::Cursor> m_cursor;
         int m_divisor;
         uint64_t m_ack_timeout;
         bool m_hard_sync;
@@ -37,7 +38,8 @@ namespace pzq {
         boost::mutex m_mutex;
 
     public:
-        datastore_t () : m_divisor (0), m_ack_timeout (5ULL), m_hard_sync (false), m_syncs (0), m_expired (0), m_acks (0)
+        datastore_t () : m_divisor (0), m_ack_timeout (5000000ULL), m_hard_sync (false), m_syncs (0),
+                         m_expired (0), m_acks (0)
         {}
 
         void open (const std::string &path, int64_t inflight_size);
@@ -46,26 +48,28 @@ namespace pzq {
 
 		void remove (const std::string &key);
 
+        void remove_inflight (const std::string &k);
+
 		void sync ();
 
         int64_t messages ()
         {
-            return this->db.count ();
+            return m_db.count ();
         }
 
         int64_t db_size ()
         {
-            return this->db.size ();
+            return m_db.size ();
         }
 
-        int64_t messages_in_flight ()
+        int64_t messages_inflight ()
         {
-            return this->inflight_db.count ();
+            return m_inflight_db.count ();
         }
 
         int64_t inflight_db_size ()
         {
-            return this->inflight_db.size ();
+            return m_inflight_db.size ();
         }
 
         uint64_t num_syncs ()
@@ -124,30 +128,30 @@ namespace pzq {
     class datastore_exception : public std::exception
     {
     private:
-        std::string db_err;
+        std::string m_db_err;
 
     public:
 
         datastore_exception (const char *message)
         {
-            db_err.append (message);
+            m_db_err.append (message);
         }
 
         datastore_exception (const char *message, const BasicDB& db)
         {
-            db_err.append (message);
-            db_err.append (": ");
-            db_err.append (db.error ().message ());
+            m_db_err.append (message);
+            m_db_err.append (": ");
+            m_db_err.append (db.error ().message ());
         }
 
         datastore_exception (const BasicDB& db)
         {
-            db_err.append (db.error ().message ());
+            m_db_err.append (db.error ().message ());
         }
 
         virtual const char* what() const throw()
         {
-            return db_err.c_str ();
+            return m_db_err.c_str ();
         }
 
         virtual ~datastore_exception() throw()

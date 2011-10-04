@@ -18,6 +18,7 @@
 #include "manager.hpp"
 #include "socket.hpp"
 #include "visitor.hpp"
+#include "reaper.hpp"
 
 #include <boost/program_options.hpp>
 #include <signal.h>
@@ -112,58 +113,58 @@ int main (int argc, char *argv [])
     zmq::context_t context (1);
 
     {
-        {
-            int linger = 1000000000;
-            uint64_t hwm = 1;
+        int linger = 1000;
+        uint64_t in_hwm = 10, out_hwm = 1;
 
-            boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
-            store.get ()->set_sync_divisor (sync_divisor);
-            store.get ()->open (filename, inflight_size);
+        boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
+        store.get ()->set_sync_divisor (sync_divisor);
+        store.get ()->open (filename, inflight_size);
+        store.get ()->set_ack_timeout (ack_timeout);
 
-            boost::shared_ptr<pzq::socket_t> in_socket (new pzq::socket_t (context, ZMQ_ROUTER));
-            in_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-            in_socket.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-            in_socket.get ()->bind (receiver_dsn.c_str ());
+        boost::shared_ptr<pzq::socket_t> in_socket (new pzq::socket_t (context, ZMQ_ROUTER));
+        in_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        in_socket.get ()->setsockopt (ZMQ_HWM, &in_hwm, sizeof (uint64_t));
+        in_socket.get ()->bind (receiver_dsn.c_str ());
 
-            boost::shared_ptr<pzq::socket_t> out_socket (new pzq::socket_t (context, ZMQ_DEALER));
-            out_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-            out_socket.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-            out_socket.get ()->bind (sender_dsn.c_str ());
+        boost::shared_ptr<pzq::socket_t> out_socket (new pzq::socket_t (context, ZMQ_DEALER));
+        out_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        out_socket.get ()->setsockopt (ZMQ_HWM, &out_hwm, sizeof (uint64_t));
+        out_socket.get ()->bind (sender_dsn.c_str ());
 
-            boost::shared_ptr<pzq::socket_t> monitor (new pzq::socket_t (context, ZMQ_ROUTER));
-            monitor.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-            monitor.get ()->setsockopt (ZMQ_HWM, &hwm, sizeof (uint64_t));
-            monitor.get ()->bind (monitor_dsn.c_str ());
+        boost::shared_ptr<pzq::socket_t> monitor (new pzq::socket_t (context, ZMQ_ROUTER));
+        monitor.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
+        monitor.get ()->setsockopt (ZMQ_HWM, &out_hwm, sizeof (uint64_t));
+        monitor.get ()->bind (monitor_dsn.c_str ());
 
-            try {
-                // Start the store manager
-                pzq::manager_t manager;
+        try {
+            // Start the store manager
+            pzq::manager_t manager;
 
-                // Reaper for expired messages
-                pzq::expiry_visitor_t reaper (store);
-                reaper.set_frequency (reaper_frequency);
-                reaper.set_ack_timeout (ack_timeout);
-                reaper.start ();
+            // Reaper for expired messages
+            pzq::expiry_reaper_t reaper (store);
+            reaper.set_frequency (reaper_frequency);
+            reaper.set_ack_timeout (ack_timeout);
+            reaper.start ();
 
-                manager.set_datastore (store);
-                manager.set_ack_timeout (ack_timeout);
-                manager.set_sockets (in_socket, out_socket, monitor);
-                manager.start ();
+            manager.set_datastore (store);
+            manager.set_ack_timeout (ack_timeout);
+            manager.set_sockets (in_socket, out_socket, monitor);
+            manager.start ();
 
-                while (keep_running)
-                {
-                    boost::this_thread::sleep (
-                        boost::posix_time::seconds (1)
-                    );
-                }
-                manager.stop ();
-                reaper.stop ();
-
-            } catch (std::exception &e) {
-                std::cerr << "Error starting store manager: " << e.what () << std::endl;
-                return 1;
+            while (keep_running)
+            {
+                boost::this_thread::sleep (
+                    boost::posix_time::seconds (1)
+                );
             }
+            manager.stop ();
+            reaper.stop ();
+
+        } catch (std::exception &e) {
+            pzq::log ("Error running store manager: %s", e.what ());
+            return 1;
         }
     }
+    pzq::log ("Terminating");
     return 0;
 }

@@ -108,12 +108,12 @@ class PZQProducer
     {
         $out = array ($message->get_id (), "");
         $m = $message->get_message ();
-        
+  
         if (is_array ($m))
             $out = array_merge ($out, $m);
         else
             array_push ($out, $m);
-        
+  
         $this->socket->sendMulti ($out);
         
         $r = $w = array ();
@@ -127,9 +127,9 @@ class PZQProducer
         if ($response [0] != $message->get_id ()) 
             throw new PZQClientException ('Got ACK for wrong message');
 
-        if ($response [1] != 'OK')
+        if ($response [1] != '1')
             throw new PZQClientException (
-                        'Remote peer failed to handle message'
+                "Remote peer failed to handle message ({$response [3]})" 
                       );
   
         return true;
@@ -189,16 +189,16 @@ class PZQConsumer
         $sent = (float) ($message->get_sent_time () / 1000000);
         $diff = $t - $sent;
 
-        return ($diff > ($message->get_ack_timeout ()/ 1000000));
+        return ($diff > ($message->get_ack_timeout () / 1000000));
     }
     
-    public function ack (PZQMessage $message)
+    public function ack (PZQMessage $message, $success = true)
     {
         $this->socket->sendMulti (
                         array (
-                            $message->get_peer (), 
-                            "", 
-                            $message->get_id ()
+                            $message->get_peer (),
+                            $message->get_id (),
+                            ($success ? "1" : "0")
                         )
                     );
     }

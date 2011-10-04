@@ -14,8 +14,8 @@
  *  limitations under the License.                 
  */
 
-#ifndef PZQ_VISITOR_HPP
-# define PZQ_VISITOR_HPP
+#ifndef PZQ_REAPER_HPP
+# define PZQ_REAPER_HPP
 
 #include "pzq.hpp"
 #include "store.hpp"
@@ -27,34 +27,31 @@ using namespace kyotocabinet;
 
 namespace pzq
 {
-    class visitor_t : public DB::Visitor
+    class expiry_reaper_t : public DB::Visitor, public thread_t
     {
     private:
-        boost::shared_ptr<pzq::socket_t> m_socket;
-		boost::shared_ptr<pzq::datastore_t> m_store;
-        uuid_t m_uuid;
+        uint64_t m_time;
+        uint64_t m_timeout;
+        uint64_t m_frequency;
+        boost::shared_ptr<pzq::datastore_t> m_store;
 
     public:
-        visitor_t ()
+        expiry_reaper_t (boost::shared_ptr<pzq::datastore_t> store) : m_timeout (5000000), m_frequency (2500000), m_store (store)
+        {}
+
+        void set_frequency (uint64_t frequency)
         {
-            uuid_generate (m_uuid);
+            m_frequency = frequency;
         }
 
-        void set_socket (boost::shared_ptr<pzq::socket_t> socket)
+        void set_ack_timeout (uint64_t timeout)
         {
-            m_socket = socket;
+            m_timeout = timeout;
         }
 
-        void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
-        {
-            m_store = store;
-        }
+        void run ();
 
-        bool can_write ();
-
-    private:
         const char *visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp);
-
     };
 }
 

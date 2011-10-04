@@ -29,7 +29,7 @@ LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 LINK_DIRECTORIES(${ZeroMQ_LIBRARY_DIRS})
 LINK_DIRECTORIES(${kyotocabinet_LIBRARY_DIRS})
 
-ADD_EXECUTABLE(${MODULE_NAME} src/main.cpp src/manager.cpp src/store.cpp src/visitor.cpp)
+ADD_EXECUTABLE(${MODULE_NAME} src/main.cpp src/manager.cpp src/store.cpp src/visitor.cpp src/reaper.cpp)
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${Boost_LIBRARIES})
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${ZeroMQ_LIBRARIES})
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${kyotocabinet_LIBRARIES})
@@ -38,13 +38,3 @@ IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   TARGET_LINK_LIBRARIES(${MODULE_NAME} uuid)
 ENDIF()
 
-# tests
-ADD_EXECUTABLE(producer tests/producer.cpp)
-TARGET_LINK_LIBRARIES(producer ${Boost_LIBRARIES})
-TARGET_LINK_LIBRARIES(producer ${ZeroMQ_LIBRARIES})
-TARGET_LINK_LIBRARIES(producer ${kyotocabinet_LIBRARIES})
-
-ADD_EXECUTABLE(consumer tests/consumer.cpp)
-TARGET_LINK_LIBRARIES(consumer ${Boost_LIBRARIES})
-TARGET_LINK_LIBRARIES(consumer ${ZeroMQ_LIBRARIES})
-TARGET_LINK_LIBRARIES(consumer ${kyotocabinet_LIBRARIES})

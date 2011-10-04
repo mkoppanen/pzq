@@ -16,100 +16,45 @@
 #include "visitor.hpp"
 #include "time.hpp"
 
-bool pzq::visitor_t::can_write ()
-{
-    int events = 0;
-    size_t optsiz = sizeof (int);
-
-    m_socket.get ()->getsockopt (ZMQ_EVENTS, &events, &optsiz);
-
-    if (events & ZMQ_POLLOUT)
-        return true;
-
-    return false;
-}
-
 const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp) 
 {
-    uint64_t pos = 0;
-    size_t msg_size;
-
+    size_t msg_size, pos = 0;
 
 	std::string key (kbuf, ksiz);
 
-	if (m_store.get ()->is_in_flight (key))
-	{
-		return NOP;
-	}
+	if ((*m_store).messages_inflight () > 10)
+        throw std::runtime_error ("Reached maximum messages in flight limit");
 
-    if (!can_write ())
-    	throw std::runtime_error ("The socket is in blocking state");
+	if ((*m_store).is_in_flight (key))
+		return NOP;
 
     pzq::message_t parts;
-
-    boost::shared_ptr<zmq::message_t> header (new zmq::message_t (ksiz));
-    memcpy (header.get ()->data (), kbuf, ksiz);
-    parts.push_back (header);
+    parts.append (key);
 
     // Time when the message goes out
     std::stringstream mt;
     mt << pzq::microsecond_timestamp ();
 
-    boost::shared_ptr<zmq::message_t> out_time (new zmq::message_t (mt.str ().size ()));
-    memcpy (out_time.get ()->data (), mt.str ().c_str (), mt.str ().size ());
-    parts.push_back (out_time);
+    parts.append (mt.str ());
 
     std::stringstream expiry;
-    expiry << m_store.get ()->get_ack_timeout ();
+    expiry << (*m_store).get_ack_timeout ();
 
-    boost::shared_ptr<zmq::message_t> ack_timeout (new zmq::message_t (expiry.str ().size ()));
-    memcpy (ack_timeout.get ()->data (), expiry.str ().c_str (), expiry.str ().size ());
-    parts.push_back (ack_timeout);
+    parts.append (expiry.str ());
 
     while (true)
     {
         memcpy (&msg_size, vbuf + pos, sizeof (uint64_t));
         pos += sizeof (uint64_t);
 
-        boost::shared_ptr<zmq::message_t> part (new zmq::message_t (msg_size));
-        memcpy (part.get ()->data (), vbuf + pos, msg_size);
-        parts.push_back (part);
+        parts.append (vbuf + pos, msg_size);
 
         pos += msg_size;
         if (pos >= vsiz)
             break;
     }
-    if (m_socket.get ()->send_many (parts))
-        m_store->mark_in_flight (key);
+    if ((*m_socket).send_many (parts, ZMQ_NOBLOCK))
+        (*m_store).mark_in_flight (key);
 
     return NOP;
-}
-
-void pzq::expiry_visitor_t::run ()
-{
-    while (is_running ())
-    {
-#ifdef DEBUG
-        std::cerr << "Running expiry reaper" << std::endl;
-#endif
-        m_time = microsecond_timestamp ();
-        m_store.get ()->iterate_inflight (this);
-        boost::this_thread::sleep (boost::posix_time::microseconds (m_frequency));
-    }
-}
-
-const char *pzq::expiry_visitor_t::visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp)
-{
-    if (sizeof (uint64_t) != vsiz)
-        return Visitor::NOP;
-
-    uint64_t value;
-    memcpy (&value, vbuf, sizeof (uint64_t));
-
-	if (m_time - value > m_timeout)
-	{
-        m_store.get ()->message_expired ();
-        return Visitor::REMOVE;
-	}
-    return Visitor::NOP;
 }

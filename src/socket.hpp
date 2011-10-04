@@ -39,7 +39,7 @@ namespace pzq
                     snd_flags = flags | ZMQ_SNDMORE;
                 }
                 // TODO: what happens if send fails in the middle of multi-part
-                if (send ((*(*it).get ()), snd_flags) == false)
+                if (send ((*(*it)), snd_flags) == false)
                     return false;
             }
             return true;
@@ -57,11 +57,11 @@ namespace pzq
 
             int i = 0;
             do {
-                boost::shared_ptr <zmq::message_t> message_part (new zmq::message_t);
-                if (recv (message_part.get (), flags) == false)
+                zmq::message_t msg;
+                if (recv (&msg, flags) == false)
                     return 0;
 
-                parts.push_back (message_part);
+                parts.append (msg);
                 getsockopt (ZMQ_RCVMORE, &more, &moresz);
                 ++i;
             } while (more);

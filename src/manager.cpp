@@ -18,59 +18,80 @@
 #include "manager.hpp"
 #include "socket.hpp"
 
-void pzq::manager_t::handle_receiver_in ()
+void pzq::manager_t::handle_producer_in ()
 {
     pzq::message_t parts;
 
-    if (m_in.get ()->recv_many (parts) > 0)
+    if (m_in.get ()->recv_many (parts) > 2)
     {
         pzq::message_t ack;
 
-        // peer id 
-        ack.push_back (parts.front ());
-        parts.pop_front ();
+        // peer id
+        ack.append (parts.pop_front ());
 
         // message id
-        ack.push_back (parts.front ());
+        ack.append (parts.pop_front ());
+
+        // TODO: this only ignores the empty part, should probably
+        // ignore everything before the empty part.
         parts.pop_front ();
+
+        bool success;
+        std::string status_message;
 
         try {
             m_store.get ()->save (parts);
-
-            boost::shared_ptr<zmq::message_t> part (new zmq::message_t (2));
-            memcpy (part.get ()->data (), "OK", 2);
-            ack.push_back (part);
-
+            success = true;
         } catch (std::exception &e) {
-            boost::shared_ptr<zmq::message_t> part (new zmq::message_t (2));
-            memcpy (part.get ()->data (), "NO", 2);
-            ack.push_back (part);
+            success = false;
+            status_message = e.what ();
         }
+
+        // Status code
+        ack.append ((void *)(success ? "1" : "0"), 1);
+
+        // delimiter
+        ack.append ();
+
+        if (!success && status_message.size ())
+            ack.append (status_message);
+
         m_in->send_many (ack);
     }
 }
 
-void pzq::manager_t::handle_sender_ack ()
+void pzq::manager_t::handle_consumer_ack ()
 {
     pzq::message_t parts;
 
-    if (m_out.get ()->recv_many (parts) > 0)
+    if (m_out.get ()->recv_many (parts) >= 2)
     {
-        std::string key (static_cast <char *>(parts.back ().get ()->data ()), parts.back ().get ()->size ());
+        // The next part is the key
+        std::string key;
+        parts.front (key);
+        parts.pop_front ();
+
+        // The last part indicates whether this was success or fail
+        std::string status;
+        parts.front (status);
+
         try {
-            m_store.get ()->remove (key);
+            if (!status.compare ("1"))
+                m_store.get ()->remove (key);
+            else
+                m_store.get ()->remove_inflight (key);
         } catch (std::exception &e) {
-            std::cerr << "Not removing record (" << key << "): " << e.what () << std::endl;
+            pzq::log ("Not removing record (%s): %s", e.what ());
         }
     }
 }
 
-void pzq::manager_t::handle_sender_out ()
+void pzq::manager_t::handle_consumer_out ()
 {
     try {
         m_store.get ()->iterate (&m_visitor);
     } catch (std::exception &e) {
-#ifdef DEBUG
+#if 1
         std::cerr << "Datastore iteration stopped: " << e.what () << std::endl;
 #endif
     }
@@ -88,23 +109,18 @@ void pzq::manager_t::handle_monitor_in ()
         {
             std::stringstream datas;
             datas << "messages: "           << m_store.get ()->messages ()             << std::endl;
-            datas << "messages_in_flight: " << m_store.get ()->messages_in_flight ()   << std::endl;
+            datas << "messages_inflight: "  << m_store.get ()->messages_inflight ()    << std::endl;
             datas << "db_size: "            << m_store.get ()->db_size ()              << std::endl;
-            datas << "in_flightdb_size: "   << m_store.get ()->inflight_db_size ()     << std::endl;
+            datas << "inflight_db_size: "   << m_store.get ()->inflight_db_size ()     << std::endl;
             datas << "syncs: "              << m_store.get ()->num_syncs ()            << std::endl;
             datas << "expired_messages: "   << m_store.get ()->get_messages_expired () << std::endl;
 
             pzq::message_t reply;
-            reply.push_back (message.front ());
+            reply.append (message.front ());
 
             boost::shared_ptr<zmq::message_t> delimiter (new zmq::message_t);
-            reply.push_back (delimiter);
-
-            std::string blob = datas.str ();
-
-            boost::shared_ptr<zmq::message_t> values (new zmq::message_t (blob.size ()));
-            memcpy (values.get ()->data (), blob.c_str (), blob.size ());
-            reply.push_back (values);
+            reply.append (delimiter);
+            reply.append (datas.str ());
 
             m_monitor.get ()->send_many (reply, 0);
         }
@@ -130,41 +146,36 @@ void pzq::manager_t::run ()
     items [2].events  = ZMQ_POLLIN;
     items [2].revents = 0;
 
-    // Set time out on store
-    m_store.get ()->set_ack_timeout (m_ack_timeout);
-
     while (is_running ())
     {
-        bool messages_pending = m_store.get ()->messages_pending ();
-
-        if (messages_pending)
-            items [1].events = ZMQ_POLLIN | ZMQ_POLLOUT;
-        else
-            items [1].events  = ZMQ_POLLIN;
+        items [1].events = ((m_store.get ()->messages_pending ()) ? (ZMQ_POLLIN | ZMQ_POLLOUT) : ZMQ_POLLIN);
 
         try {
             rc = zmq::poll (&items [0], 3, -1);
-        } catch (std::exception& e) {
-            std::cerr << e.what () << ". exiting.." << std::endl;
+        } catch (zmq::error_t &e) {
+            pzq::log ("Poll interrupted");
             break;
         }
+
+        if (rc < 0)
+            throw new std::runtime_error ("zmq::poll failed");
 
         if (items [0].revents & ZMQ_POLLIN)
         {
             // Message coming in from the left side
-            handle_receiver_in ();
+            handle_producer_in ();
         }
 
         if (items [1].revents & ZMQ_POLLIN)
         {
             // ACK coming in from right side
-            handle_sender_ack ();
+            handle_consumer_ack ();
         }
 
         if (items [1].revents & ZMQ_POLLOUT)
         {
             // Sending messages to right side
-            handle_sender_out ();
+            handle_consumer_out ();
         }
 
         if (items [2].revents & ZMQ_POLLIN)
