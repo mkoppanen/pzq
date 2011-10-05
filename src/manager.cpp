@@ -91,7 +91,7 @@ void pzq::manager_t::handle_consumer_out ()
     try {
         m_store.get ()->iterate (&m_visitor);
     } catch (std::exception &e) {
-#if 1
+#if 0
         std::cerr << "Datastore iteration stopped: " << e.what () << std::endl;
 #endif
     }

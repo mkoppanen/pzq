@@ -34,9 +34,10 @@ namespace pzq
         uint64_t m_timeout;
         uint64_t m_frequency;
         boost::shared_ptr<pzq::datastore_t> m_store;
+        bool m_has_expires;
 
     public:
-        expiry_reaper_t (boost::shared_ptr<pzq::datastore_t> store) : m_timeout (5000000), m_frequency (2500000), m_store (store)
+        expiry_reaper_t (boost::shared_ptr<pzq::datastore_t> store) : m_timeout (5000000), m_frequency (2500000), m_store (store), m_has_expires (false)
         {}
 
         void set_frequency (uint64_t frequency)

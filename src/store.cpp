@@ -26,7 +26,6 @@ void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
 {
 	std::string p = path;
 
-    m_db.tune_comparator (DECIMALCOMP);
     m_db.tune_defrag (8);
 
     if (m_db.open (p, TreeDB::OWRITER | TreeDB::OCREATE) == false)
@@ -38,6 +37,10 @@ void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
 	m_inflight_db.cap_size (inflight_size);
 	if (m_inflight_db.open (p, CacheDB::OWRITER | CacheDB::OCREATE) == false)
 		throw pzq::datastore_exception (m_db);
+
+    // initialise cursor
+	m_cursor.reset (m_db.cursor ());
+    (*m_cursor).jump ();
 }
 
 bool pzq::datastore_t::save (pzq::message_t &parts)
@@ -116,12 +119,13 @@ bool pzq::datastore_t::is_in_flight (const std::string &k)
 {
 	uint64_t value;
 	if (m_inflight_db.get (k.c_str (), k.size (), (char *) &value, sizeof (uint64_t)) == -1)
+	{
 		return false;
+	}
 
 	if (pzq::microsecond_timestamp () - value > m_ack_timeout)
 	{
 		m_inflight_db.remove (k.c_str (), k.size ());
-		m_inflight_db.synchronize ();
         message_expired ();
 		return false;
 	}
@@ -132,38 +136,44 @@ void pzq::datastore_t::mark_in_flight (const std::string &k)
 {
 	uint64_t value = pzq::microsecond_timestamp ();
     m_inflight_db.add (k.c_str (), k.size (), (const char *) &value, sizeof (uint64_t));
-    m_inflight_db.synchronize ();
 }
 
 void pzq::datastore_t::iterate (DB::Visitor *visitor)
 {
-#if 0
-    if (!m_cursor.get ())
-    {
-        m_cursor.reset (m_db.cursor ());
-        m_cursor.get ()->jump ();
-    }
+    int expired = get_messages_expired ();
 
     while (true)
     {
         size_t key_size, value_size;
+        const char *value;
 
-        boost::scoped_array<char> key (m_cursor.get ()->get_key (&key_size));
-        boost::scoped_array<char> value (m_cursor.get ()->get_value (&value_size));
+        char *key = (*m_cursor).get (&key_size, &value, &value_size, true);
 
-        if (key.get () && value.get ())
-            visitor->visit_full (key.get (), key_size, value.get (), value_size, NULL);
-
-        // End of records
-        if (!m_cursor.get ()->step ())
+        if (!key)
         {
-            m_cursor.get ()->jump ();
-            throw new pzq::datastore_exception ("End of records");
+            (*m_cursor).jump ();
+            throw std::runtime_error ("Failed to fetch record from store");
         }
+        try {
+            visitor->visit_full (key, key_size, value, value_size, NULL);
+            delete [] key;
+        } catch (std::exception &e) {
+            delete [] key;
+            throw e;
+        }
+
+        int current_expired = get_messages_expired ();
+        if (expired != current_expired)
+        {
+            (*m_cursor).jump ();
+        }
+        expired = current_expired;
     }
-#endif
+
+#if 0
     if (!m_db.iterate (visitor, false))
         throw pzq::datastore_exception (m_db);
+#endif
 }
 
 void pzq::datastore_t::iterate_inflight (DB::Visitor *visitor)

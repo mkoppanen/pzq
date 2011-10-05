@@ -16,13 +16,26 @@
 #include "visitor.hpp"
 #include "time.hpp"
 
+bool pzq::visitor_t::can_write ()
+{
+    int events = 0;
+    size_t optsiz = sizeof (int);
+
+    m_socket.get ()->getsockopt (ZMQ_EVENTS, &events, &optsiz);
+
+    if (events & ZMQ_POLLOUT)
+        return true;
+
+    return false;
+}
+
 const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp) 
 {
     size_t msg_size, pos = 0;
 
 	std::string key (kbuf, ksiz);
 
-	if ((*m_store).messages_inflight () > 10)
+	if ((*m_store).messages_inflight () > 10 || !can_write ())
         throw std::runtime_error ("Reached maximum messages in flight limit");
 
 	if ((*m_store).is_in_flight (key))
@@ -41,7 +54,7 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
     expiry << (*m_store).get_ack_timeout ();
 
     parts.append (expiry.str ());
-
+    parts.append ();
     while (true)
     {
         memcpy (&msg_size, vbuf + pos, sizeof (uint64_t));
@@ -53,7 +66,7 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
         if (pos >= vsiz)
             break;
     }
-    if ((*m_socket).send_many (parts, ZMQ_NOBLOCK))
+    if ((*m_socket).send_many (parts))
         (*m_store).mark_in_flight (key);
 
     return NOP;

@@ -34,12 +34,13 @@ namespace pzq {
         int m_divisor;
         uint64_t m_ack_timeout;
         bool m_hard_sync;
-        uint64_t m_syncs, m_expired, m_acks;
+        uint64_t m_syncs;
+        int m_expired;
         boost::mutex m_mutex;
 
     public:
         datastore_t () : m_divisor (0), m_ack_timeout (5000000ULL), m_hard_sync (false), m_syncs (0),
-                         m_expired (0), m_acks (0)
+                         m_expired (0)
         {}
 
         void open (const std::string &path, int64_t inflight_size);
@@ -103,10 +104,10 @@ namespace pzq {
             m_hard_sync = sync;
         }
 
-        uint64_t get_messages_expired ()
+        int get_messages_expired ()
         {
             m_mutex.lock ();
-            uint64_t expired = m_expired;
+            int expired = m_expired;
             m_mutex.unlock ();
             return expired;
         }

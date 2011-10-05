@@ -37,7 +37,6 @@ const char *pzq::expiry_reaper_t::visit_full (const char *kbuf, size_t ksiz, con
 
 	if (m_time - value > m_timeout)
 	{
-        std::cerr << "Record expired" << std::endl;
         m_store.get ()->message_expired ();
         return Visitor::REMOVE;
 	}
