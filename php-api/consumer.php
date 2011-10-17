@@ -9,5 +9,6 @@ for ($i = 0; $i < 10000; $i++)
 {
     $message = $c->consume ();
     $c->ack ($message);
+    echo "Consumed {$i}" . PHP_EOL;
 }
 

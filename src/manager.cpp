@@ -17,6 +17,7 @@
 #include "pzq.hpp"
 #include "manager.hpp"
 #include "socket.hpp"
+#include "header.hpp"
 
 void pzq::manager_t::handle_producer_in ()
 {
@@ -48,7 +49,7 @@ void pzq::manager_t::handle_producer_in ()
         }
 
         // Status code
-        ack.append ((void *)(success ? "1" : "0"), 1);
+        ack.append ((void *) (success ? "1" : "0"), 1);
 
         // delimiter
         ack.append ();

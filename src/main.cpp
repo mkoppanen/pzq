@@ -32,6 +32,34 @@ void time_to_go (int signum)
     keep_running = 0;
 }
 
+static
+int daemonize ()
+{
+    signal(SIGINT, SIG_IGN);
+	signal(SIGKILL, SIG_IGN);
+
+	if (fork() == 0) {
+	    // child
+	    signal (SIGINT, time_to_go);
+        signal (SIGHUP, time_to_go);
+        signal (SIGTERM, time_to_go);
+
+        if (chdir ("/") == -1) {
+            std::cerr << "Failed to chdir: " << strerror (errno) << std::endl;
+            return -1;
+        }
+        fclose(stdin);
+		fclose(stdout);
+		fclose(stderr);
+    } else {
+        // parent
+        signal(SIGINT, SIG_DFL);
+		signal(SIGKILL, SIG_DFL);
+		exit(0);
+    }
+    return 0;
+}
+
 int main (int argc, char *argv []) 
 {
     po::options_description desc ("Command-line options");
@@ -66,6 +94,11 @@ int main (int argc, char *argv [])
     desc.add_options()
         ("hard-sync",
          "If enabled the data is flushed to disk on every sync")
+    ;
+
+    desc.add_options()
+        ("background",
+         "Run in daemon mode")
     ;
 
     desc.add_options()
@@ -105,9 +138,12 @@ int main (int argc, char *argv [])
         return 1;
     }
 
-    signal (SIGINT, time_to_go);
-    signal (SIGHUP, time_to_go);
-    signal (SIGTERM, time_to_go);
+    // Background
+    if (vm.count ("background")) {
+        if (daemonize () == -1) {
+            exit (1);
+        }
+    }
 
     // Init new zeromq context
     zmq::context_t context (1);

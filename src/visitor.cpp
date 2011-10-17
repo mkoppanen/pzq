@@ -32,10 +32,9 @@ bool pzq::visitor_t::can_write ()
 const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp) 
 {
     size_t msg_size, pos = 0;
-
 	std::string key (kbuf, ksiz);
 
-	if ((*m_store).messages_inflight () > 10 || !can_write ())
+	if (!can_write ())
         throw std::runtime_error ("Reached maximum messages in flight limit");
 
 	if ((*m_store).is_in_flight (key))
@@ -66,8 +65,10 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
         if (pos >= vsiz)
             break;
     }
-    if ((*m_socket).send_many (parts))
+    if ((*m_socket).send_many (parts, ZMQ_NOBLOCK))
         (*m_store).mark_in_flight (key);
+    else
+        throw std::runtime_error ("Reached maximum messages in flight limit");
 
     return NOP;
 }
