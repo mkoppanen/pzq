@@ -17,7 +17,6 @@
 #include "pzq.hpp"
 #include "manager.hpp"
 #include "socket.hpp"
-#include "header.hpp"
 
 void pzq::manager_t::handle_producer_in ()
 {
