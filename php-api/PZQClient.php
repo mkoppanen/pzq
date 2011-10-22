@@ -86,6 +86,8 @@ class PZQProducer
     
     private $poll;
     
+    private $ignore_ack;
+    
     public function __construct ($dsn = null)
     {
         $this->socket = new ZMQSocket (new ZMQContext (), ZMQ::SOCKET_DEALER);
@@ -104,6 +106,11 @@ class PZQProducer
         $this->socket->connect ($dsn);
     }
     
+    public function set_ignore_ack ($value)
+    {
+        $this->ignore_ack = $value;
+    }
+    
     public function produce (PZQMessage $message, $timeout = 5000)
     {
         $out = array ($message->get_id (), "");
@@ -116,22 +123,24 @@ class PZQProducer
   
         $this->socket->sendMulti ($out);
         
-        $r = $w = array ();
-        $this->poll->poll ($r, $w, $timeout);
+        if (!$this->ignore_ack)
+        {
+            $r = $w = array ();
+            $this->poll->poll ($r, $w, $timeout);
         
-        if (empty ($r))
-            throw new PZQClientException ('ACK timeout');
+            if (empty ($r))
+                throw new PZQClientException ('ACK timeout');
         
-        $response = $this->socket->recvMulti ();
+            $response = $this->socket->recvMulti ();
 
-        if ($response [0] != $message->get_id ()) 
-            throw new PZQClientException ('Got ACK for wrong message');
+            if ($response [0] != $message->get_id ()) 
+                throw new PZQClientException ('Got ACK for wrong message');
 
-        if ($response [1] != '1')
-            throw new PZQClientException (
-                "Remote peer failed to handle message ({$response [3]})" 
-                      );
-  
+            if ($response [1] != '1')
+                throw new PZQClientException (
+                    "Remote peer failed to handle message ({$response [3]})" 
+                          );
+        }
         return true;
     }
 }

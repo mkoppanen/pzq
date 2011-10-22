@@ -24,17 +24,17 @@
 
 void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
 {
-	std::string p = path;
-
+    std::string p = path;
     m_db.tune_defrag (8);
 
     if (m_db.open (p, TreeDB::OWRITER | TreeDB::OCREATE) == false)
         throw pzq::datastore_exception (m_db);
 
     pzq::log ("Loaded %lld messages from store", m_db.count ());
-	p.append (".inflight");
 
 	m_inflight_db.cap_size (inflight_size);
+
+	p.append (".inflight");
 	if (m_inflight_db.open (p, CacheDB::OWRITER | CacheDB::OCREATE) == false)
 		throw pzq::datastore_exception (m_db);
 
@@ -66,14 +66,13 @@ bool pzq::datastore_t::save (pzq::message_t &parts)
     {
         uint64_t size = (*it).get ()->size ();
         success = m_db.append (kval.str ().c_str (), kval.str ().size (),
-                                  (const char *) &size, sizeof (uint64_t));
+                               (const char *) &size, sizeof (uint64_t));
 
         if (!success)
             break;
 
         success = m_db.append (kval.str ().c_str (), kval.str ().size (),
-                                  (const char *) (*it).get ()->data (), (*it).get ()->size ());
-
+                               (const char *) (*it).get ()->data (), (*it).get ()->size ());
         if (!success)
             break;
     }
@@ -105,8 +104,6 @@ void pzq::datastore_t::remove (const std::string &k)
 
 	if (!m_db.remove (k))
 	    throw pzq::datastore_exception (m_db);
-
-    sync ();
 }
 
 void pzq::datastore_t::remove_inflight (const std::string &k)
@@ -162,6 +159,7 @@ void pzq::datastore_t::iterate (DB::Visitor *visitor)
             throw e;
         }
 
+        // if messages expire we move the cursor to beginning
         int current_expired = get_messages_expired ();
         if (expired != current_expired)
         {

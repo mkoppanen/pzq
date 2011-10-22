@@ -39,7 +39,7 @@ namespace pzq {
 
         void handle_producer_in ();
 
-        void handle_consumer_ack ();
+        void handle_consumer_in ();
 
         void handle_consumer_out ();
 

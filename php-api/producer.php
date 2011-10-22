@@ -3,6 +3,7 @@
 include 'PZQClient.php';
 
 $p = new PZQProducer ("tcp://127.0.0.1:11131");
+$p->set_ignore_ack (true);
 
 for ($i = 0; $i < 10000; $i++)
 {

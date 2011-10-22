@@ -60,7 +60,7 @@ void pzq::manager_t::handle_producer_in ()
     }
 }
 
-void pzq::manager_t::handle_consumer_ack ()
+void pzq::manager_t::handle_consumer_in ()
 {
     pzq::message_t parts;
 
@@ -90,11 +90,7 @@ void pzq::manager_t::handle_consumer_out ()
 {
     try {
         m_store.get ()->iterate (&m_visitor);
-    } catch (std::exception &e) {
-#if 0
-        std::cerr << "Datastore iteration stopped: " << e.what () << std::endl;
-#endif
-    }
+    } catch (std::exception &e) { }
 }
 
 void pzq::manager_t::handle_monitor_in ()
@@ -169,7 +165,7 @@ void pzq::manager_t::run ()
         if (items [1].revents & ZMQ_POLLIN)
         {
             // ACK coming in from right side
-            handle_consumer_ack ();
+            handle_consumer_in ();
         }
 
         if (items [1].revents & ZMQ_POLLOUT)
