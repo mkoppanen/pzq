@@ -65,6 +65,7 @@ int main (int argc, char *argv [])
     po::options_description desc ("Command-line options");
     po::variables_map vm;
     std::string filename;
+    uid_t uid;
     int64_t inflight_size;
     uint64_t ack_timeout, reaper_frequency;
     std::string receiver_dsn, sender_dsn, monitor_dsn, peer_uuid;
@@ -105,6 +106,12 @@ int main (int argc, char *argv [])
           po::value<int64_t> (&inflight_size)->default_value (31457280),
          "Maximum size in bytes for the in-flight messages database. Full database causes LRU collection")
     ;
+    
+    desc.add_options()
+        ("uid",
+         po::value<uid_t> (&uid)->default_value (0),
+        "User ID the process should run under")
+   ;
 
     desc.add_options()
         ("receive-dsn",
@@ -135,6 +142,13 @@ int main (int argc, char *argv [])
     if (vm.count ("help")) {
         std::cerr << desc << std::endl;
         return 1;
+    }
+    
+    if(vm.count("uid") && uid > 0) {
+        if(setuid(uid) == -1) {
+            std::cerr << "Failed to become user" <<std::endl;
+            exit(1);
+        }
     }
 
     // Background
