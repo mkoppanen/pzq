@@ -65,7 +65,6 @@ int main (int argc, char *argv [])
     po::options_description desc ("Command-line options");
     po::variables_map vm;
     std::string filename;
-    int sync_divisor;
     int64_t inflight_size;
     uint64_t ack_timeout, reaper_frequency;
     std::string receiver_dsn, sender_dsn, monitor_dsn, peer_uuid;
@@ -153,7 +152,6 @@ int main (int argc, char *argv [])
         uint64_t in_hwm = 10, out_hwm = 1;
 
         boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
-        store.get ()->set_sync_divisor (sync_divisor);
         store.get ()->open (filename, inflight_size);
         store.get ()->set_ack_timeout (ack_timeout);
 
