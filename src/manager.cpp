@@ -32,19 +32,28 @@ void pzq::manager_t::handle_producer_in ()
         // message id
         ack.append (parts.pop_front ());
 
-        // TODO: this only ignores the empty part, should probably
-        // ignore everything before the empty part.
-        parts.pop_front ();
+        while (parts.size () > 0 && parts.front ().get ()->size () > 0)
+            parts.pop_front ();
 
-        bool success;
-        std::string status_message;
+         bool success;
+         std::string status_message;
 
-        try {
-            m_store.get ()->save (parts);
-            success = true;
-        } catch (std::exception &e) {
+        if (parts.size () == 0)
+        {
             success = false;
-            status_message = e.what ();
+            status_message = "Malformed message, no delimiter found or missing message parts";
+        }
+        else
+        {
+            parts.pop_front ();
+
+            try {
+                m_store.get ()->save (parts);
+                success = true;
+            } catch (std::exception &e) {
+                success = false;
+                status_message = e.what ();
+            }
         }
 
         // Status code
@@ -147,7 +156,7 @@ void pzq::manager_t::run ()
         items [1].events = ((m_store.get ()->messages_pending ()) ? (ZMQ_POLLIN | ZMQ_POLLOUT) : ZMQ_POLLIN);
 
         try {
-            rc = zmq::poll (&items [0], 3, -1);
+            rc = zmq::poll (&items [0], 3, 50000);
         } catch (zmq::error_t &e) {
             pzq::log ("Poll interrupted");
             break;
