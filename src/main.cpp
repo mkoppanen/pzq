@@ -156,6 +156,10 @@ int main (int argc, char *argv [])
         if (daemonize () == -1) {
             exit (1);
         }
+    } else {
+        signal (SIGINT, time_to_go);
+        signal (SIGHUP, time_to_go);
+        signal (SIGTERM, time_to_go);
     }
 
     // Init new zeromq context
