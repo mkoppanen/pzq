@@ -22,6 +22,7 @@
 
 #include <boost/program_options.hpp>
 #include <signal.h>
+#include <pwd.h>
 
 namespace po = boost::program_options;
 
@@ -60,12 +61,25 @@ int daemonize ()
     return 0;
 }
 
+bool drop_privileges(uid_t uid, gid_t gid)
+{
+    if (setgid(gid) != 0) {
+        return false;
+    }
+
+    if (setuid(uid) != 0) {
+        return false;
+    }
+    
+    return true;
+}
+
 int main (int argc, char *argv []) 
 {
     po::options_description desc ("Command-line options");
     po::variables_map vm;
     std::string filename;
-    uid_t uid;
+    std::string user;
     int64_t inflight_size;
     uint64_t ack_timeout, reaper_frequency;
     std::string receiver_dsn, sender_dsn, monitor_dsn, peer_uuid;
@@ -108,10 +122,10 @@ int main (int argc, char *argv [])
     ;
     
     desc.add_options()
-        ("uid",
-         po::value<uid_t> (&uid)->default_value (0),
-        "User ID the process should run under")
-   ;
+        ("user",
+        po::value<std::string> (&user)->default_value (""),
+        "User the process should run under")
+    ;
 
     desc.add_options()
         ("receive-dsn",
@@ -144,12 +158,21 @@ int main (int argc, char *argv [])
         return 1;
     }
     
-    if(vm.count("uid") && uid > 0) {
-        if(setuid(uid) == -1) {
-            std::cerr << "Failed to become user" <<std::endl;
+    if (vm.count ("user") && user.length() != 0) {
+        struct passwd *res_user;
+        
+        res_user = getpwnam( user.c_str() );
+        if ( !res_user ) {
+            std::cerr << "Could not find user " << user << std::endl;
+            exit(1);
+        }
+        
+        if ( !drop_privileges ( res_user->pw_uid, res_user->pw_gid ) ) {
+            std::cerr << "Failed to become user" << user << std::endl;
             exit(1);
         }
     }
+
 
     // Background
     if (vm.count ("background")) {
