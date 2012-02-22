@@ -27,7 +27,6 @@
 #include <kccachedb.h>
 #include <uuid/uuid.h>
 #include <stdarg.h>
-#include <syslog.h>
 
 namespace pzq 
 {
@@ -133,7 +132,6 @@ namespace pzq
         vsnprintf (buffer, 256, fmt, ap);
         va_end (ap);
         
-        syslog(LOG_NOTICE, buffer);
         std::cerr << "[" << date << "] - " << buffer << std::endl;
     }
 };
