@@ -131,7 +131,7 @@ namespace pzq
         va_start (ap, fmt);
         vsnprintf (buffer, 256, fmt, ap);
         va_end (ap);
-
+        
         std::cerr << "[" << date << "] - " << buffer << std::endl;
     }
 };

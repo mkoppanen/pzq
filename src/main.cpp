@@ -22,6 +22,7 @@
 
 #include <boost/program_options.hpp>
 #include <signal.h>
+#include <pwd.h>
 
 namespace po = boost::program_options;
 
@@ -60,12 +61,25 @@ int daemonize ()
     return 0;
 }
 
+bool drop_privileges(uid_t uid, gid_t gid)
+{
+    if (setgid(gid) != 0) {
+        return false;
+    }
+
+    if (setuid(uid) != 0) {
+        return false;
+    }
+    
+    return true;
+}
+
 int main (int argc, char *argv []) 
 {
     po::options_description desc ("Command-line options");
     po::variables_map vm;
     std::string filename;
-    int sync_divisor;
+    std::string user;
     int64_t inflight_size;
     uint64_t ack_timeout, reaper_frequency;
     std::string receiver_dsn, sender_dsn, monitor_dsn, peer_uuid;
@@ -106,6 +120,12 @@ int main (int argc, char *argv [])
           po::value<int64_t> (&inflight_size)->default_value (31457280),
          "Maximum size in bytes for the in-flight messages database. Full database causes LRU collection")
     ;
+    
+    desc.add_options()
+        ("user",
+        po::value<std::string> (&user)->default_value (""),
+        "User the process should run under")
+    ;
 
     desc.add_options()
         ("receive-dsn",
@@ -137,6 +157,22 @@ int main (int argc, char *argv [])
         std::cerr << desc << std::endl;
         return 1;
     }
+    
+    if (vm.count ("user") && user.length() != 0) {
+        struct passwd *res_user;
+        
+        res_user = getpwnam( user.c_str() );
+        if ( !res_user ) {
+            std::cerr << "Could not find user " << user << std::endl;
+            exit(1);
+        }
+        
+        if ( !drop_privileges ( res_user->pw_uid, res_user->pw_gid ) ) {
+            std::cerr << "Failed to become user" << user << std::endl;
+            exit(1);
+        }
+    }
+
 
     // Background
     if (vm.count ("background")) {
@@ -157,7 +193,6 @@ int main (int argc, char *argv [])
         uint64_t in_hwm = 10, out_hwm = 1;
 
         boost::shared_ptr<pzq::datastore_t> store (new pzq::datastore_t ());
-        store.get ()->set_sync_divisor (sync_divisor);
         store.get ()->open (filename, inflight_size);
         store.get ()->set_ack_timeout (ack_timeout);
 

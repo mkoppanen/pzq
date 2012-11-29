@@ -31,7 +31,6 @@ namespace pzq {
         TreeDB m_db;
 		CacheDB m_inflight_db;
         boost::scoped_ptr<TreeDB::Cursor> m_cursor;
-        int m_divisor;
         uint64_t m_ack_timeout;
         bool m_hard_sync;
         uint64_t m_syncs;
@@ -39,7 +38,7 @@ namespace pzq {
         boost::mutex m_mutex;
 
     public:
-        datastore_t () : m_divisor (0), m_ack_timeout (5000000ULL), m_hard_sync (false), m_syncs (0),
+        datastore_t () : m_ack_timeout (5000000ULL), m_hard_sync (false), m_syncs (0),
                          m_expired (0)
         {}
 
@@ -83,11 +82,6 @@ namespace pzq {
 		bool is_in_flight (const std::string &k);
 
 		void mark_in_flight (const std::string &k);
-
-        void set_sync_divisor (int divisor)
-        {
-            m_divisor = divisor;
-        }
 
         void set_ack_timeout (uint64_t ack_timeout)
         {
