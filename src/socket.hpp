@@ -52,8 +52,8 @@ namespace pzq
 
         int recv_many (pzq::message_t &parts, int flags)
         {
-            int64_t more;
-            size_t moresz = sizeof (int64_t);
+            int32_t more;
+            size_t moresz = sizeof (int32_t);
 
             int i = 0;
             do {

@@ -156,7 +156,7 @@ void pzq::manager_t::run ()
         items [1].events = ((m_store.get ()->messages_pending ()) ? (ZMQ_POLLIN | ZMQ_POLLOUT) : ZMQ_POLLIN);
 
         try {
-            rc = zmq::poll (&items [0], 3, 50000);
+            rc = zmq::poll (&items [0], 3, 50000/1000);
         } catch (zmq::error_t &e) {
             pzq::log ("Poll interrupted");
             break;

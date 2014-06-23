@@ -198,20 +198,20 @@ int main (int argc, char *argv [])
 
         boost::shared_ptr<pzq::socket_t> in_socket (new pzq::socket_t (context, ZMQ_ROUTER));
         in_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        in_socket.get ()->setsockopt (ZMQ_SNDHWM, &in_hwm, sizeof (uint64_t));
-        in_socket.get ()->setsockopt (ZMQ_RCVHWM, &in_hwm, sizeof (uint64_t));
+        in_socket.get ()->setsockopt (ZMQ_SNDHWM, &in_hwm, sizeof (uint32_t));
+        in_socket.get ()->setsockopt (ZMQ_RCVHWM, &in_hwm, sizeof (uint32_t));
         in_socket.get ()->bind (receiver_dsn.c_str ());
 
         boost::shared_ptr<pzq::socket_t> out_socket (new pzq::socket_t (context, ZMQ_DEALER));
         out_socket.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        out_socket.get ()->setsockopt (ZMQ_SNDHWM, &out_hwm, sizeof (uint64_t));
-        out_socket.get ()->setsockopt (ZMQ_RCVHWM, &out_hwm, sizeof (uint64_t));
+        out_socket.get ()->setsockopt (ZMQ_SNDHWM, &out_hwm, sizeof (uint32_t));
+        out_socket.get ()->setsockopt (ZMQ_RCVHWM, &out_hwm, sizeof (uint32_t));
         out_socket.get ()->bind (sender_dsn.c_str ());
 
         boost::shared_ptr<pzq::socket_t> monitor (new pzq::socket_t (context, ZMQ_ROUTER));
         monitor.get ()->setsockopt (ZMQ_LINGER, &linger, sizeof (int));
-        monitor.get ()->setsockopt (ZMQ_SNDHWM, &out_hwm, sizeof (uint64_t));
-        monitor.get ()->setsockopt (ZMQ_RCVHWM, &out_hwm, sizeof (uint64_t));
+        monitor.get ()->setsockopt (ZMQ_SNDHWM, &out_hwm, sizeof (uint32_t));
+        monitor.get ()->setsockopt (ZMQ_RCVHWM, &out_hwm, sizeof (uint32_t));
         monitor.get ()->bind (monitor_dsn.c_str ());
 
         try {
