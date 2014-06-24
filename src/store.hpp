@@ -44,9 +44,11 @@ namespace pzq {
 
         void open (const std::string &path, int64_t inflight_size);
 
-        bool save (pzq::message_t &message_parts);
+        bool save (pzq::message_t &message_parts, std::string key, std::string& storedKey );
 
-		void remove (const std::string &key);
+        void remove (const std::string &key);
+       
+        void removeReplica (const std::string &key);
 
         void remove_inflight (const std::string &k);
 
@@ -116,6 +118,8 @@ namespace pzq {
         void iterate (DB::Visitor *visitor);
 
         void iterate_inflight (DB::Visitor *visitor);
+       
+        void resetIterator();
 
         ~datastore_t ();
     };

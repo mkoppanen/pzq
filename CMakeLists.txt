@@ -32,13 +32,20 @@ LINK_DIRECTORIES(${ZeroMQ_LIBRARY_DIRS})
 LINK_DIRECTORIES(${kyotocabinet_LIBRARY_DIRS})
 LINK_DIRECTORIES(${libuuid_LIBRARY_DIRS})
 
-ADD_EXECUTABLE(${MODULE_NAME} src/main.cpp src/manager.cpp src/store.cpp src/visitor.cpp src/reaper.cpp)
+ADD_EXECUTABLE(${MODULE_NAME} src/main.cpp 
+                              src/manager.cpp
+			      src/store.cpp 
+			      src/visitor.cpp 
+			      src/reaper.cpp 
+			      src/cluster.cpp
+			      src/ackcache.cpp)
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${Boost_LIBRARIES})
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${ZeroMQ_LIBRARIES})
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${kyotocabinet_LIBRARIES})
 TARGET_LINK_LIBRARIES(${MODULE_NAME} ${libuuid_LIBRARIES})
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  TARGET_LINK_LIBRARIES(${MODULE_NAME} uuid pthread)
+  TARGET_LINK_LIBRARIES(${MODULE_NAME} uuid)
+  TARGET_LINK_LIBRARIES(${MODULE_NAME} pthread)
 ENDIF()
 

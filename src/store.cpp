@@ -43,7 +43,7 @@ void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
     (*m_cursor).jump ();
 }
 
-bool pzq::datastore_t::save (pzq::message_t &parts)
+bool pzq::datastore_t::save (pzq::message_t &parts, std::string extKey, std::string& storedKey)
 {
     if (!parts.size ())
         throw std::runtime_error ("Trying to save empty message");
@@ -55,8 +55,16 @@ bool pzq::datastore_t::save (pzq::message_t &parts)
     uuid_unparse (uu, uuid_str);
 
     std::stringstream kval;
-    kval << pzq::microsecond_timestamp ();
-    kval << "|" << uuid_str;
+    if( extKey == "" )
+     {
+        kval << pzq::microsecond_timestamp ();
+        kval << "|" << uuid_str;
+     }
+   else
+     {
+        kval << extKey;
+        printf("storing recplica: %s\n", kval.str().c_str());
+     }
 
     bool success = true;
 
@@ -82,6 +90,8 @@ bool pzq::datastore_t::save (pzq::message_t &parts)
 
     if (!success)
         throw pzq::datastore_exception ("Failed to store the record");
+   
+    storedKey = kval.str();
 
     return true;
 }
@@ -104,6 +114,12 @@ void pzq::datastore_t::remove (const std::string &k)
 
 	if (!m_db.remove (k))
 	    throw pzq::datastore_exception (m_db);
+}
+
+void pzq::datastore_t::removeReplica( const std::string& k )
+{
+   if( !m_db.remove(k) )
+     throw pzq::datastore_exception( m_db );
 }
 
 void pzq::datastore_t::remove_inflight (const std::string &k)
@@ -199,4 +215,9 @@ pzq::datastore_t::~datastore_t ()
     pzq::log ("Closing down datastore, messages=[%lld] messages_inflight=[%lld]", m_db.count (), m_inflight_db.count ());
     m_db.close ();
     m_inflight_db.close ();
+}
+
+void pzq::datastore_t::resetIterator()
+{
+   m_cursor->jump();
 }

@@ -22,6 +22,7 @@
 #include "socket.hpp"
 #include "time.hpp"
 #include "thread.hpp"
+#include "cluster.hpp"
 
 using namespace kyotocabinet;
 
@@ -33,6 +34,7 @@ namespace pzq
         boost::shared_ptr<pzq::socket_t> m_socket;
 		boost::shared_ptr<pzq::datastore_t> m_store;
         uuid_t m_uuid;
+        boost::shared_ptr< pzq::cluster_t > m_cluster;
 
     public:
         visitor_t ()
@@ -40,9 +42,11 @@ namespace pzq
             uuid_generate (m_uuid);
         }
 
-        void set_socket (boost::shared_ptr<pzq::socket_t> socket)
+        void set_socket (boost::shared_ptr<pzq::socket_t> socket,
+                         boost::shared_ptr<pzq::cluster_t> cluster)
         {
             m_socket = socket;
+            m_cluster = cluster;
         }
 
         void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
