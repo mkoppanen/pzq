@@ -68,6 +68,7 @@ be added to the messages.
 
 - Producing a message
 
+```
 	+--------------------+
 	| message id         |
 	+--------------------+
@@ -75,9 +76,11 @@ be added to the messages.
 	+--------------------+
 	| 1..N message parts |
 	+--------------------+
+```
 
 - Producer ACK message
 
+```
 	+---------------------+
 	| message id          |
 	+---------------------+
@@ -87,12 +90,14 @@ be added to the messages.
 	+---------------------+
 	| 0..1 status message |
 	+---------------------+
+```
 
 *Note*: Status code 1 for success and 0 for failure. 
         Status message is set in case of failure.
 
 - Consumer message
 
+```
 	+---------------------+
 	| peer id             |
 	+---------------------+
@@ -106,9 +111,11 @@ be added to the messages.
 	+---------------------+
 	| 1..N message parts  |
 	+---------------------+
+```
     
 - Consumer ACK message
 
+```
 	+---------------------+
 	| peer id             |
 	+---------------------+
@@ -116,6 +123,7 @@ be added to the messages.
 	+---------------------+
 	| status code 0/1     |
 	+---------------------+      
+```
 
 *Note*: Status code 1 for success and 0 for failure. 
             
