@@ -1,7 +1,9 @@
 pzq
 ===
 
-A very simple store and forward device using ZeroMQ.
+A very simple store and forward device using ZeroMQ. It has some
+optional cluster capabilities in order to provide high availability of
+all accepted messages.
 
 Building
 ========
@@ -31,6 +33,21 @@ Options
                                             communication socket
       --monitor-dsn arg (=ipc:///tmp/pzq-monitor)
                                             The DSN for the monitoring socket
+      --replicas arg (=0)                   Number of replicas that should
+                                            created before acknowledging message to 
+					    producer
+      --nodes arg                           List of DSN for other cluster nodes 
+                                            separated by a ','
+      --timeout-nodes arg (=10000000)       How long to wait before considering a 
+                                            node down (microseconds)
+      --broadcast-dsn arg                   DSN used by other cluster nodes to 
+                                            broadcast msessages.
+                                            Broardcast port 
+                                            should be the same for all nodes
+      --timeout_replication arg (=100000)   How long to wait for replication before
+                                            acknowledging producer with a 
+					    replication error message
+       
 
 
 Consistency
@@ -94,6 +111,11 @@ be added to the messages.
 
 *Note*: Status code 1 for success and 0 for failure. 
         Status message is set in case of failure.
+	
+*Note*:	In the case of a message successully stored in queue but all
+        replications could not be created before timeout_replication,
+	the status will be 1 but the status message will contain
+        REPLICATION_FAILED
 
 - Consumer message
 
