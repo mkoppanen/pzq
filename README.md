@@ -68,54 +68,54 @@ be added to the messages.
 
 - Producing a message
 
-    +--------------------+
-    | message id         |
-    +--------------------+
-    | 0 size part        |
-    +--------------------+
-    | 1..N message parts |
-    +--------------------+
+	+--------------------+
+	| message id         |
+	+--------------------+
+	| 0 size part        |
+	+--------------------+
+	| 1..N message parts |
+	+--------------------+
 
 - Producer ACK message
 
-    +---------------------+
-    | message id          |
-    +---------------------+
-    | status code 0/1     |
-    +---------------------+
-    | 0 size part         |
-    +---------------------+
-    | 0..1 status message |
-    +---------------------+
+	+---------------------+
+	| message id          |
+	+---------------------+
+	| status code 0/1     |
+	+---------------------+
+	| 0 size part         |
+	+---------------------+
+	| 0..1 status message |
+	+---------------------+
 
 *Note*: Status code 1 for success and 0 for failure. 
         Status message is set in case of failure.
 
 - Consumer message
 
-    +---------------------+
-    | peer id             |
-    +---------------------+
-    | message id          |
-    +---------------------+
-    | sent time           |
-    +---------------------+
-    | ack timeout         |
-    +---------------------+
-    | 0 size part         |
-    +---------------------+
-    | 1..N message parts  |
-    +---------------------+
+	+---------------------+
+	| peer id             |
+	+---------------------+
+	| message id          |
+	+---------------------+
+	| sent time           |
+	+---------------------+
+	| ack timeout         |
+	+---------------------+
+	| 0 size part         |
+	+---------------------+
+	| 1..N message parts  |
+	+---------------------+
     
 - Consumer ACK message
 
-    +---------------------+
-    | peer id             |
-    +---------------------+
-    | message id          |
-    +---------------------+
-    | status code 0/1     |
-    +---------------------+      
+	+---------------------+
+	| peer id             |
+	+---------------------+
+	| message id          |
+	+---------------------+
+	| status code 0/1     |
+	+---------------------+      
 
 *Note*: Status code 1 for success and 0 for failure. 
             
