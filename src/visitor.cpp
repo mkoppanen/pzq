@@ -46,8 +46,14 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
     // Check if it is a replica and if it should be sent
     memcpy( &msg_size, vbuf, sizeof( uint64_t ) );
     if( msg_size > 8 && strncmp( vbuf+sizeof(uint64_t), "REPLICA:", 8 ) == 0 )
-     if( !m_cluster->shouldSendReplica( std::string( vbuf+sizeof(uint64_t) + 8, msg_size - 8) ) )
-       return NOP;
+     {
+	std::string replicaSource = std::string( vbuf+sizeof(uint64_t) + 8, msg_size - 8 );
+	
+	if( !m_cluster->shouldSendReplica( replicaSource ) )
+	  return NOP;
+	
+	m_cluster->checkReplica( key, replicaSource );
+     }
 
     // Time when the message goes out
     std::stringstream mt;

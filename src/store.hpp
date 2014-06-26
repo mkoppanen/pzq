@@ -49,6 +49,8 @@ namespace pzq {
         void remove (const std::string &key);
        
         void removeReplica (const std::string &key);
+       
+        bool check( const std::string& key );
 
         void remove_inflight (const std::string &k);
 

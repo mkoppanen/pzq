@@ -111,6 +111,25 @@ namespace pzq
         return true;
      }
    
+   /*
+    * If a replica is here since m_timeoutNode we broadcast a checkmessage. 
+    * The replica source will broadcast a remove message if it is no longer in its database
+    */
+   void cluster_t::checkReplica( const string& key,
+				 const string& owner )
+     {
+	uint64_t curtime = microsecond_timestamp();
+	
+	string sts = key.substr( 0, key.find_first_of( '|' ) );
+	std::istringstream ss( sts );
+	
+	uint64_t ts;
+	ss >> ts;
+	
+	if( ( ( int64_t )curtime - ( int64_t )ts ) > m_timeoutNode )
+	  broadcastCheck( key, owner );
+     }
+   
    boost::shared_ptr< pzq::socket_t > cluster_t::getOutSocket()
      {
 	return m_out;
@@ -209,7 +228,7 @@ namespace pzq
         m_nextBroadcast = curtime + m_timeoutNode / 10;
      }
    
-   void cluster_t::broadcastRemove( const std::string& id )
+   void cluster_t::broadcastRemove( const string& id )
      {
         pzq::message_t rm;
         rm.append( "CLUSTER" );
@@ -217,6 +236,18 @@ namespace pzq
         rm.append( id );
         
         m_pub->send_many( rm );
+     }
+   
+   void cluster_t::broadcastCheck( const string& id,
+				   const string& owner )
+     {
+	pzq::message_t chk;
+	chk.append( "CLUSTER" );
+	chk.append( "CHECK" );
+	chk.append( id );
+	chk.append( owner );
+	
+	m_pub->send_many( chk );
      }
    
    void cluster_t::handleNodesMessage()
@@ -232,6 +263,8 @@ namespace pzq
                handleKeepAlive( msg );
              else if( type == "REMOVE" )
                handleRemove( msg );
+	     else if( type == "CHECK" )
+	       handleCheck( msg );
           }
      }
    
@@ -262,5 +295,24 @@ namespace pzq
           {
              printf("could not find %s", id.c_str());
           }
+     }
+   
+   void cluster_t::handleCheck( pzq::message_t msg )
+     {
+	msg.pop_front();
+	
+	pzq::message_part_t part = msg.front();
+	string id = string( ( char* )part->data(), part->size() );
+	
+	msg.pop_front();
+	
+	part = msg.front();
+	string owner = string( ( char* )part->data(), part->size() );
+	
+	if( owner == m_currentNode )
+	  {
+	     if( !m_store->check( id ) )
+	       broadcastRemove( id );
+	  }
      }
 }

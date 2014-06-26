@@ -61,6 +61,9 @@ namespace pzq
         void handleNodesMessage();
         void setTimeoutState();
 	
+	void checkReplica( const std::string& key,
+			   const std::string& owner );
+	
       private:
 	cluster_t();
 	cluster_t( const cluster_t& );
@@ -71,6 +74,10 @@ namespace pzq
 	void sendAck( boost::shared_ptr< pzq::socket_t > in, pzq::message_t ack );
         void handleKeepAlive( pzq::message_t msg );
         void handleRemove( pzq::message_t msg );
+	void handleCheck( pzq::message_t msg );
+	
+	void broadcastCheck( const std::string& id,
+			     const std::string& owner );
 	
 	int                                   m_replicas;
 	nodelist_t                            m_nodelist;

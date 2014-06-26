@@ -122,6 +122,11 @@ void pzq::datastore_t::removeReplica( const std::string& k )
      throw pzq::datastore_exception( m_db );
 }
 
+bool pzq::datastore_t::check( const std::string& k )
+{
+   return m_db.check( k );
+}
+
 void pzq::datastore_t::remove_inflight (const std::string &k)
 {
     if (!m_inflight_db.remove (k.c_str (), k.size ()))
