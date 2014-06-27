@@ -92,7 +92,7 @@ static std::string buildBroadcastDsn( const std::string& nodeDsn, const std::str
         broadcastDsnParts.push_back( nodeDsnParts[ 0 ] );
         broadcastDsnParts.push_back( nodeDsnParts[ 1 ] );
         broadcastDsnParts.push_back( currentNodeDsnParts[ 2 ] );
-        printf("%s\n", boost::algorithm::join( broadcastDsnParts, ":" ).c_str());
+	pzq::log("%s\n", boost::algorithm::join( broadcastDsnParts, ":" ).c_str());
         return boost::algorithm::join( broadcastDsnParts, ":" );
      }
    else
@@ -110,7 +110,7 @@ static std::string buildSubscribeDsn( const std::string& currentNodeDsn )
    if( currentNodeDsnParts.size() == 3 )
      {
         currentNodeDsnParts[ 1 ] = "//*";
-        printf("sub:%s\n", boost::algorithm::join( currentNodeDsnParts, ":" ).c_str());
+	pzq::log("sub:%s\n", boost::algorithm::join( currentNodeDsnParts, ":" ).c_str());
         return boost::algorithm::join( currentNodeDsnParts, ":" );
      }
    else
@@ -307,15 +307,17 @@ int main (int argc, char *argv [])
         broadcastSocket.get()->setsockopt( ZMQ_LINGER, &linger, sizeof( int ) );
         broadcastSocket.get()->setsockopt( ZMQ_SNDHWM, &out_hwm, sizeof( uint32_t ) );
         broadcastSocket.get()->setsockopt( ZMQ_RCVHWM, &out_hwm, sizeof( uint32_t ) );
-        for( std::vector< std::string >::iterator it = nodeNames.begin(); it != nodeNames.end(); ++it )
-         broadcastSocket.get()->connect( buildBroadcastDsn( *it, currentNode_dsn ).c_str() );
-
+        if( replicas )
+	 for( std::vector< std::string >::iterator it = nodeNames.begin(); it != nodeNames.end(); ++it )
+	   broadcastSocket.get()->connect( buildBroadcastDsn( *it, currentNode_dsn ).c_str() );
+	    
         boost::shared_ptr<pzq::socket_t> subscribeSocket( new pzq::socket_t( context, ZMQ_SUB ) );
         subscribeSocket.get()->setsockopt( ZMQ_LINGER, &linger, sizeof( int ) );
         subscribeSocket.get()->setsockopt( ZMQ_SNDHWM, &in_hwm, sizeof( uint32_t ) );
         subscribeSocket.get()->setsockopt( ZMQ_RCVHWM, &in_hwm, sizeof( uint32_t ) );
         subscribeSocket.get()->setsockopt( ZMQ_SUBSCRIBE, "CLUSTER", 7 );
-        subscribeSocket.get()->bind( buildSubscribeDsn( currentNode_dsn ).c_str() );
+        if( replicas )
+	 subscribeSocket.get()->bind( buildSubscribeDsn( currentNode_dsn ).c_str() );
          
         boost::shared_ptr< pzq::cluster_t > cluster( new pzq::cluster_t( replicas, nodeNames, timeoutNode, 
                                                                          clusterSocket, broadcastSocket, subscribeSocket, currentNode_dsn, store ) );

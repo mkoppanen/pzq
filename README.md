@@ -5,6 +5,8 @@ A very simple store and forward device using ZeroMQ. It has some
 optional cluster capabilities in order to provide high availability of
 all accepted messages.
 
+This version is only compatible with zeromq version 3.2 and above.
+
 Building
 ========
 
