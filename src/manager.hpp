@@ -21,6 +21,8 @@
 #include "store.hpp"
 #include "socket.hpp"
 #include "visitor.hpp"
+#include "cluster.hpp"
+#include "ackcache.hpp"
 
 using namespace kyotocabinet;
 
@@ -33,6 +35,8 @@ namespace pzq {
         boost::shared_ptr<pzq::socket_t> m_out;
         boost::shared_ptr<pzq::socket_t> m_monitor;
         boost::shared_ptr<pzq::datastore_t> m_store;
+        boost::shared_ptr<pzq::cluster_t > m_cluster;
+        boost::shared_ptr<pzq::ackcache_t > m_waitingAcks;
         pzq::visitor_t m_visitor;
         uint64_t m_ack_timeout;
         boost::mutex m_mutex;
@@ -48,13 +52,13 @@ namespace pzq {
         bool send_ack (boost::shared_ptr<zmq::message_t> peer_id, boost::shared_ptr<zmq::message_t> ticket, const std::string &status);
 
     public:
-        void set_sockets (boost::shared_ptr<pzq::socket_t> in, boost::shared_ptr<pzq::socket_t> out, boost::shared_ptr<pzq::socket_t> monitor)
+        void set_sockets (boost::shared_ptr<pzq::socket_t> in, boost::shared_ptr<pzq::socket_t> out, boost::shared_ptr<pzq::socket_t> monitor, boost::shared_ptr<pzq::cluster_t> cluster)
         {
             m_mutex.lock ();
             m_in = in;
             m_out = out;
             m_monitor = monitor;
-            m_visitor.set_socket (m_out);
+            m_visitor.set_socket (m_out, cluster);
             m_mutex.unlock ();
         }
 
@@ -64,10 +68,20 @@ namespace pzq {
         }
 
         void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
-		{
-			m_store = store;
-			m_visitor.set_datastore (store);
-		}
+        {
+            m_store = store;
+            m_visitor.set_datastore (store);
+        }
+       
+        void set_cluster( boost::shared_ptr< pzq::cluster_t > cluster )
+        {
+            m_cluster = cluster;
+        }
+       
+        void set_ack_cache( boost::shared_ptr< pzq::ackcache_t > ackCache )
+        {
+            m_waitingAcks = ackCache;
+        }
 
         void run ();
     };

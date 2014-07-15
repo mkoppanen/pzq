@@ -29,7 +29,7 @@ namespace pzq {
     {
     protected:
         TreeDB m_db;
-		CacheDB m_inflight_db;
+        CacheDB m_inflight_db;
         boost::scoped_ptr<TreeDB::Cursor> m_cursor;
         uint64_t m_ack_timeout;
         bool m_hard_sync;
@@ -44,13 +44,17 @@ namespace pzq {
 
         void open (const std::string &path, int64_t inflight_size);
 
-        bool save (pzq::message_t &message_parts);
+        bool save (pzq::message_t &message_parts, std::string key, std::string& storedKey );
 
-		void remove (const std::string &key);
+        void remove (const std::string &key);
+       
+        void removeReplica (const std::string &key);
+       
+        bool check( const std::string& key );
 
         void remove_inflight (const std::string &k);
 
-		void sync ();
+        void sync ();
 
         int64_t messages ()
         {
@@ -79,9 +83,9 @@ namespace pzq {
 
         bool messages_pending ();
 
-		bool is_in_flight (const std::string &k);
+        bool is_in_flight (const std::string &k);
 
-		void mark_in_flight (const std::string &k);
+        void mark_in_flight (const std::string &k);
 
         void set_ack_timeout (uint64_t ack_timeout)
         {
@@ -116,6 +120,8 @@ namespace pzq {
         void iterate (DB::Visitor *visitor);
 
         void iterate_inflight (DB::Visitor *visitor);
+       
+        void resetIterator();
 
         ~datastore_t ();
     };
