@@ -68,20 +68,20 @@ namespace pzq {
         }
 
         void set_datastore (boost::shared_ptr<pzq::datastore_t> store)
-		{
-			m_store = store;
-			m_visitor.set_datastore (store);
-		}
+        {
+            m_store = store;
+            m_visitor.set_datastore (store);
+        }
        
         void set_cluster( boost::shared_ptr< pzq::cluster_t > cluster )
-	 {
-	    m_cluster = cluster;
-	 }
+        {
+            m_cluster = cluster;
+        }
        
         void set_ack_cache( boost::shared_ptr< pzq::ackcache_t > ackCache )
-	 {
-	    m_waitingAcks = ackCache;
-	 }
+        {
+            m_waitingAcks = ackCache;
+        }
 
         void run ();
     };

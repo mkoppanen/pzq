@@ -41,11 +41,11 @@ static
 int daemonize ()
 {
     signal(SIGINT, SIG_IGN);
-	signal(SIGKILL, SIG_IGN);
+    signal(SIGKILL, SIG_IGN);
 
-	if (fork() == 0) {
-	    // child
-	    signal (SIGINT, time_to_go);
+    if (fork() == 0) {
+        // child
+        signal (SIGINT, time_to_go);
         signal (SIGHUP, time_to_go);
         signal (SIGTERM, time_to_go);
 
@@ -54,13 +54,13 @@ int daemonize ()
             return -1;
         }
         fclose(stdin);
-		fclose(stdout);
-		fclose(stderr);
+        fclose(stdout);
+        fclose(stderr);
     } else {
         // parent
         signal(SIGINT, SIG_DFL);
-		signal(SIGKILL, SIG_DFL);
-		exit(0);
+        signal(SIGKILL, SIG_DFL);
+        exit(0);
     }
     return 0;
 }
@@ -80,44 +80,44 @@ bool drop_privileges(uid_t uid, gid_t gid)
 
 static std::string buildBroadcastDsn( const std::string& nodeDsn, const std::string& currentNodeDsn )
 {
-   std::vector< std::string > nodeDsnParts;
-   split( nodeDsnParts, nodeDsn, boost::is_any_of(":"), boost::algorithm::token_compress_on );
-   
-   std::vector< std::string > currentNodeDsnParts;
-   split( currentNodeDsnParts, currentNodeDsn, boost::is_any_of(":"), boost::algorithm::token_compress_on );
-   
-   if( nodeDsnParts.size() == 3 && currentNodeDsnParts.size() == 3 )
-     {
+    std::vector< std::string > nodeDsnParts;
+    split( nodeDsnParts, nodeDsn, boost::is_any_of(":"), boost::algorithm::token_compress_on );
+    
+    std::vector< std::string > currentNodeDsnParts;
+    split( currentNodeDsnParts, currentNodeDsn, boost::is_any_of(":"), boost::algorithm::token_compress_on );
+    
+    if( nodeDsnParts.size() == 3 && currentNodeDsnParts.size() == 3 )
+    {
         std::vector< std::string > broadcastDsnParts;
         broadcastDsnParts.push_back( nodeDsnParts[ 0 ] );
         broadcastDsnParts.push_back( nodeDsnParts[ 1 ] );
         broadcastDsnParts.push_back( currentNodeDsnParts[ 2 ] );
-	pzq::log("%s\n", boost::algorithm::join( broadcastDsnParts, ":" ).c_str());
+        pzq::log("%s\n", boost::algorithm::join( broadcastDsnParts, ":" ).c_str());
         return boost::algorithm::join( broadcastDsnParts, ":" );
-     }
-   else
-     {
+    }
+    else
+    {
         std::cerr << "failed to parse all dsn" << std::endl;
         exit(1);
-     }
+    }
 }
 
 static std::string buildSubscribeDsn( const std::string& currentNodeDsn )
 {
-   std::vector< std::string > currentNodeDsnParts;
-   split( currentNodeDsnParts, currentNodeDsn, boost::is_any_of(":"), boost::algorithm::token_compress_on );
-   
-   if( currentNodeDsnParts.size() == 3 )
-     {
+    std::vector< std::string > currentNodeDsnParts;
+    split( currentNodeDsnParts, currentNodeDsn, boost::is_any_of(":"), boost::algorithm::token_compress_on );
+    
+    if( currentNodeDsnParts.size() == 3 )
+    {
         currentNodeDsnParts[ 1 ] = "//*";
-	pzq::log("sub:%s\n", boost::algorithm::join( currentNodeDsnParts, ":" ).c_str());
+        pzq::log("sub:%s\n", boost::algorithm::join( currentNodeDsnParts, ":" ).c_str());
         return boost::algorithm::join( currentNodeDsnParts, ":" );
-     }
-   else
-     {
+    }
+    else
+    {
         std::cerr << "failed to parse all dsn" << std::endl;
         exit(1);
-     }
+    }
 }
 
 int main (int argc, char *argv []) 
@@ -194,26 +194,26 @@ int main (int argc, char *argv [])
    
     desc.add_options()
         ("replicas",
-	 po::value<int32_t>(&replicas)->default_value(0),
-	 "Number of replicas that should created before acknowledging message to producer")
+         po::value<int32_t>(&replicas)->default_value(0),
+         "Number of replicas that should created before acknowledging message to producer")
     ;
    
     desc.add_options()
         ("nodes",
-	 po::value<std::string >(&nodes)->default_value(""),
-	 "List of DSN for other cluster nodes separated by a ','")
+         po::value<std::string >(&nodes)->default_value(""),
+         "List of DSN for other cluster nodes separated by a ','")
     ;
    
     desc.add_options()
         ("timeout-nodes",
-	 po::value<uint64_t>(&timeoutNode)->default_value(10000000),
-	 "How long to wait before considering a node down (microseconds)")
+         po::value<uint64_t>(&timeoutNode)->default_value(10000000),
+         "How long to wait before considering a node down (microseconds)")
     ;
    
     desc.add_options()
         ("broadcast-dsn",
-	 po::value<std::string>(&currentNode_dsn)->default_value(""),
-	 "DSN used by other cluster nodes to broadcast msessages. Broardcast port should be the same for all nodes")
+         po::value<std::string>(&currentNode_dsn)->default_value(""),
+         "DSN used by other cluster nodes to broadcast msessages. Broardcast port should be the same for all nodes")
     ;
    
     desc.add_options()
@@ -253,7 +253,7 @@ int main (int argc, char *argv [])
     // Parse cluster nodes names
     std::vector< std::string > nodeNames;
     if( nodes != "" )
-     split( nodeNames, nodes, boost::is_any_of(","), boost::algorithm::token_compress_on );
+        split( nodeNames, nodes, boost::is_any_of(","), boost::algorithm::token_compress_on );
 
 
     // Background
@@ -301,27 +301,27 @@ int main (int argc, char *argv [])
         clusterSocket.get()->setsockopt( ZMQ_SNDHWM, &out_hwm, sizeof( uint32_t ) );
         clusterSocket.get()->setsockopt( ZMQ_RCVHWM, &out_hwm, sizeof( uint32_t ) );
         for( std::vector< std::string >::iterator it = nodeNames.begin(); it != nodeNames.end(); ++it )
-	 clusterSocket.get()->connect( it->c_str() );
+            clusterSocket.get()->connect( it->c_str() );
 
         boost::shared_ptr<pzq::socket_t> broadcastSocket( new pzq::socket_t( context, ZMQ_PUB ) );
         broadcastSocket.get()->setsockopt( ZMQ_LINGER, &linger, sizeof( int ) );
         broadcastSocket.get()->setsockopt( ZMQ_SNDHWM, &out_hwm, sizeof( uint32_t ) );
         broadcastSocket.get()->setsockopt( ZMQ_RCVHWM, &out_hwm, sizeof( uint32_t ) );
         if( replicas )
-	 for( std::vector< std::string >::iterator it = nodeNames.begin(); it != nodeNames.end(); ++it )
-	   broadcastSocket.get()->connect( buildBroadcastDsn( *it, currentNode_dsn ).c_str() );
-	    
+            for( std::vector< std::string >::iterator it = nodeNames.begin(); it != nodeNames.end(); ++it )
+                broadcastSocket.get()->connect( buildBroadcastDsn( *it, currentNode_dsn ).c_str() );
+        
         boost::shared_ptr<pzq::socket_t> subscribeSocket( new pzq::socket_t( context, ZMQ_SUB ) );
         subscribeSocket.get()->setsockopt( ZMQ_LINGER, &linger, sizeof( int ) );
         subscribeSocket.get()->setsockopt( ZMQ_SNDHWM, &in_hwm, sizeof( uint32_t ) );
         subscribeSocket.get()->setsockopt( ZMQ_RCVHWM, &in_hwm, sizeof( uint32_t ) );
         subscribeSocket.get()->setsockopt( ZMQ_SUBSCRIBE, "CLUSTER", 7 );
         if( replicas )
-	 subscribeSocket.get()->bind( buildSubscribeDsn( currentNode_dsn ).c_str() );
-         
+            subscribeSocket.get()->bind( buildSubscribeDsn( currentNode_dsn ).c_str() );
+        
         boost::shared_ptr< pzq::cluster_t > cluster( new pzq::cluster_t( replicas, nodeNames, timeoutNode, 
                                                                          clusterSocket, broadcastSocket, subscribeSocket, currentNode_dsn, store ) );
-       
+        
         boost::shared_ptr< pzq::ackcache_t > ackCache( new pzq::ackcache_t( timeoutReplication ) );
 
         try {
@@ -337,8 +337,8 @@ int main (int argc, char *argv [])
             manager.set_datastore (store);
             manager.set_ack_timeout (ack_timeout);
             manager.set_sockets (in_socket, out_socket, monitor, cluster);
-	    manager.set_cluster( cluster );
-	    manager.set_ack_cache( ackCache );
+            manager.set_cluster( cluster );
+            manager.set_ack_cache( ackCache );
             manager.start ();
 
             while (keep_running)

@@ -25,29 +25,29 @@
 
 namespace pzq
 {
-   typedef std::map< std::string, uint64_t > nodelist_t;
-   
-   class cluster_t
-     {
-      public:
-	cluster_t( int replicas, const std::vector< std::string >& nodeNames, uint64_t timeoutNode,
-		   boost::shared_ptr< pzq::socket_t > clusterSocket,
+    typedef std::map< std::string, uint64_t > nodelist_t;
+    
+    class cluster_t
+    {
+    public:
+        cluster_t( int replicas, const std::vector< std::string >& nodeNames, uint64_t timeoutNode,
+                   boost::shared_ptr< pzq::socket_t > clusterSocket,
                    boost::shared_ptr< pzq::socket_t > broadcastSocket,
                    boost::shared_ptr< pzq::socket_t > subscribeSocket,
-		   std::string currentNode,
+                   std::string currentNode,
                    boost::shared_ptr< pzq::datastore_t > store );
-	~cluster_t();
-	
-	int replicas() const;
-	int countActiveNodes() const;
-	
-	boost::shared_ptr< pzq::socket_t > getOutSocket();
+        ~cluster_t();
+        
+        int replicas() const;
+        int countActiveNodes() const;
+        
+        boost::shared_ptr< pzq::socket_t > getOutSocket();
         boost::shared_ptr< pzq::socket_t > getSubSocket();
-	
-	pzq::message_t createReplica( pzq::message_t orig ) const;
-	
-	void handleAck( boost::shared_ptr< pzq::socket_t > in,
-			boost::shared_ptr< ackcache_t > ackCache );
+        
+        pzq::message_t createReplica( pzq::message_t orig ) const;
+        
+        void handleAck( boost::shared_ptr< pzq::socket_t > in,
+                        boost::shared_ptr< ackcache_t > ackCache );
         
         bool shouldSendReplica( std::string replicaSource ) const;
         
@@ -60,36 +60,36 @@ namespace pzq
         
         void handleNodesMessage();
         void setTimeoutState();
-	
-	void checkReplica( const std::string& key,
-			   const std::string& owner );
-	
-      private:
-	cluster_t();
-	cluster_t( const cluster_t& );
-	cluster_t& operator=( const cluster_t& );
-	
-	void sendAndEraseNegativeAck( boost::shared_ptr< pzq::socket_t > in, boost::shared_ptr< ackcache_t > ackCache, std::string id );
-	void sendAndErasePositiveAck( boost::shared_ptr< pzq::socket_t > in, boost::shared_ptr< ackcache_t > ackCache, std::string id );
-	void sendAck( boost::shared_ptr< pzq::socket_t > in, pzq::message_t ack );
+        
+        void checkReplica( const std::string& key,
+                           const std::string& owner );
+        
+    private:
+        cluster_t();
+        cluster_t( const cluster_t& );
+        cluster_t& operator=( const cluster_t& );
+        
+        void sendAndEraseNegativeAck( boost::shared_ptr< pzq::socket_t > in, boost::shared_ptr< ackcache_t > ackCache, std::string id );
+        void sendAndErasePositiveAck( boost::shared_ptr< pzq::socket_t > in, boost::shared_ptr< ackcache_t > ackCache, std::string id );
+        void sendAck( boost::shared_ptr< pzq::socket_t > in, pzq::message_t ack );
         void handleKeepAlive( pzq::message_t msg );
         void handleRemove( pzq::message_t msg );
-	void handleCheck( pzq::message_t msg );
-	
-	void broadcastCheck( const std::string& id,
-			     const std::string& owner );
-	
-	int                                   m_replicas;
-	nodelist_t                            m_nodelist;
-	int64_t                               m_timeoutNode;
+        void handleCheck( pzq::message_t msg );
+        
+        void broadcastCheck( const std::string& id,
+                             const std::string& owner );
+        
+        int                                   m_replicas;
+        nodelist_t                            m_nodelist;
+        int64_t                               m_timeoutNode;
         uint64_t                              m_nextBroadcast;
-	boost::shared_ptr< pzq::socket_t >    m_out;
+        boost::shared_ptr< pzq::socket_t >    m_out;
         boost::shared_ptr< pzq::socket_t >    m_pub;
         boost::shared_ptr< pzq::socket_t >    m_sub;
         boost::shared_ptr< pzq::datastore_t > m_store;
-	std::string                           m_currentNode;
+        std::string                           m_currentNode;
         bool                                  m_timeoutState;
-     };
+    };
 }
 
 #endif // PZQ_CLUSTER_HPP

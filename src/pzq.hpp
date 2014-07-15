@@ -116,15 +116,15 @@ namespace pzq
 
     static void log (const char *fmt, ...)
     {
-		char date[50], buffer [256];
+        char date[50], buffer [256];
 
-		struct tm *timeinfo;
+        struct tm *timeinfo;
         time_t t;
 
         time (&t);
         timeinfo = localtime (&t);
 
-		if (!::strftime (date, sizeof(date), "%d/%b/%Y:%H:%M:%S %Z", timeinfo))
+        if (!::strftime (date, sizeof(date), "%d/%b/%Y:%H:%M:%S %Z", timeinfo))
             return;
 
         va_list ap;

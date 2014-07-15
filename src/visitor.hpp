@@ -32,7 +32,7 @@ namespace pzq
     {
     private:
         boost::shared_ptr<pzq::socket_t> m_socket;
-		boost::shared_ptr<pzq::datastore_t> m_store;
+        boost::shared_ptr<pzq::datastore_t> m_store;
         uuid_t m_uuid;
         boost::shared_ptr< pzq::cluster_t > m_cluster;
 

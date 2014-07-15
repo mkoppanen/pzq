@@ -35,10 +35,10 @@ const char *pzq::expiry_reaper_t::visit_full (const char *kbuf, size_t ksiz, con
     uint64_t value;
     memcpy (&value, vbuf, sizeof (uint64_t));
 
-	if (m_time - value > m_timeout)
-	{
+    if (m_time - value > m_timeout)
+    {
         m_store.get ()->message_expired ();
         return Visitor::REMOVE;
-	}
+    }
     return Visitor::NOP;
 }

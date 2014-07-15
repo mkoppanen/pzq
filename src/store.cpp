@@ -26,20 +26,20 @@ void pzq::datastore_t::open (const std::string &path, int64_t inflight_size)
 {
     std::string p = path;
     m_db.tune_defrag (8);
-
+    
     if (m_db.open (p, TreeDB::OWRITER | TreeDB::OCREATE) == false)
         throw pzq::datastore_exception (m_db);
-
+    
     pzq::log ("Loaded %lld messages from store", m_db.count ());
-
-	m_inflight_db.cap_size (inflight_size);
-
-	p.append (".inflight");
-	if (m_inflight_db.open (p, CacheDB::OWRITER | CacheDB::OCREATE) == false)
-		throw pzq::datastore_exception (m_db);
-
+    
+    m_inflight_db.cap_size (inflight_size);
+    
+    p.append (".inflight");
+    if (m_inflight_db.open (p, CacheDB::OWRITER | CacheDB::OCREATE) == false)
+        throw pzq::datastore_exception (m_db);
+    
     // initialise cursor
-	m_cursor.reset (m_db.cursor ());
+    m_cursor.reset (m_db.cursor ());
     (*m_cursor).jump ();
 }
 
@@ -49,22 +49,22 @@ bool pzq::datastore_t::save (pzq::message_t &parts, std::string extKey, std::str
         throw std::runtime_error ("Trying to save empty message");
 
     pzq::uuid_string_t uuid_str;
-	uuid_t uu;
+    uuid_t uu;
 
-	uuid_generate (uu);
+    uuid_generate (uu);
     uuid_unparse (uu, uuid_str);
 
     std::stringstream kval;
     if( extKey == "" )
-     {
+    {
         kval << pzq::microsecond_timestamp ();
         kval << "|" << uuid_str;
-     }
-   else
-     {
+    }
+    else
+    {
         kval << extKey;
         printf("storing recplica: %s\n", kval.str().c_str());
-     }
+    }
 
     bool success = true;
 
@@ -101,7 +101,7 @@ void pzq::datastore_t::sync ()
     if (!m_db.synchronize (m_hard_sync))
         throw pzq::datastore_exception (m_db);
 
-	if (!m_inflight_db.synchronize (m_hard_sync))
+    if (!m_inflight_db.synchronize (m_hard_sync))
         throw pzq::datastore_exception (m_inflight_db);
 
     m_syncs++;
@@ -111,20 +111,20 @@ void pzq::datastore_t::remove (const std::string &k)
 {
     if (!m_inflight_db.remove (k.c_str (), k.size ()))
         throw pzq::datastore_exception (m_inflight_db);
-
-	if (!m_db.remove (k))
-	    throw pzq::datastore_exception (m_db);
+    
+    if (!m_db.remove (k))
+        throw pzq::datastore_exception (m_db);
 }
 
 void pzq::datastore_t::removeReplica( const std::string& k )
 {
-   if( !m_db.remove(k) )
-     throw pzq::datastore_exception( m_db );
+    if( !m_db.remove(k) )
+        throw pzq::datastore_exception( m_db );
 }
 
 bool pzq::datastore_t::check( const std::string& k )
 {
-   return m_db.check( k );
+    return m_db.check( k );
 }
 
 void pzq::datastore_t::remove_inflight (const std::string &k)
@@ -135,24 +135,24 @@ void pzq::datastore_t::remove_inflight (const std::string &k)
 
 bool pzq::datastore_t::is_in_flight (const std::string &k)
 {
-	uint64_t value;
-	if (m_inflight_db.get (k.c_str (), k.size (), (char *) &value, sizeof (uint64_t)) == -1)
-	{
-		return false;
-	}
+    uint64_t value;
+    if (m_inflight_db.get (k.c_str (), k.size (), (char *) &value, sizeof (uint64_t)) == -1)
+    {
+        return false;
+    }
 
-	if (pzq::microsecond_timestamp () - value > m_ack_timeout)
-	{
-		m_inflight_db.remove (k.c_str (), k.size ());
+    if (pzq::microsecond_timestamp () - value > m_ack_timeout)
+    {
+        m_inflight_db.remove (k.c_str (), k.size ());
         message_expired ();
-		return false;
-	}
-	return true;
+        return false;
+    }
+    return true;
 }
 
 void pzq::datastore_t::mark_in_flight (const std::string &k)
 {
-	uint64_t value = pzq::microsecond_timestamp ();
+    uint64_t value = pzq::microsecond_timestamp ();
     m_inflight_db.add (k.c_str (), k.size (), (const char *) &value, sizeof (uint64_t));
 }
 

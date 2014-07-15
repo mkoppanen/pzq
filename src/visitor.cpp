@@ -32,13 +32,13 @@ bool pzq::visitor_t::can_write ()
 const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const char *vbuf, size_t vsiz, size_t *sp) 
 {
     size_t msg_size, pos = 0;
-	std::string key (kbuf, ksiz);
+    std::string key (kbuf, ksiz);
 
-	if (!can_write ())
+    if (!can_write ())
         throw std::runtime_error ("Reached maximum messages in flight limit");
 
-	if ((*m_store).is_in_flight (key))
-		return NOP;
+    if ((*m_store).is_in_flight (key))
+        return NOP;
 
     pzq::message_t parts;
     parts.append (key);
@@ -46,14 +46,14 @@ const char *pzq::visitor_t::visit_full (const char *kbuf, size_t ksiz, const cha
     // Check if it is a replica and if it should be sent
     memcpy( &msg_size, vbuf, sizeof( uint64_t ) );
     if( msg_size > 8 && strncmp( vbuf+sizeof(uint64_t), "REPLICA:", 8 ) == 0 )
-     {
-	std::string replicaSource = std::string( vbuf+sizeof(uint64_t) + 8, msg_size - 8 );
-	
-	if( !m_cluster->shouldSendReplica( replicaSource ) )
-	  return NOP;
-	
-	m_cluster->checkReplica( key, replicaSource );
-     }
+    {
+        std::string replicaSource = std::string( vbuf+sizeof(uint64_t) + 8, msg_size - 8 );
+        
+        if( !m_cluster->shouldSendReplica( replicaSource ) )
+            return NOP;
+        
+        m_cluster->checkReplica( key, replicaSource );
+    }
 
     // Time when the message goes out
     std::stringstream mt;
